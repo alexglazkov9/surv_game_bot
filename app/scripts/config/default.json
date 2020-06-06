@@ -1,0 +1,4 @@
+{
+    "mongoURI": "mongodb+srv://surv_bot:krevedko16@cluster0-eqk6w.mongodb.net/<dbname>?retryWrites=true&w=majority",
+    "botTokenTest": "545524337:AAEw_0gphLRU2b5ydvQy1HE-hlmva0UGYow"
+}
