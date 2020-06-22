@@ -2,7 +2,7 @@ import * as Mongoose from "mongoose";
 import * as config from "config";
 import { PlayerModel } from "./players/players.model";
 import { SessionModel } from "./sessions/sessions.model";
-import { ItemModel, WeaponModel, ConsumableModel } from "./items/items.model";
+import { ItemModel, WeaponModel, ConsumableModel, ArmorModel } from "./items/items.model";
 
 let database: Mongoose.Connection;
 
@@ -35,6 +35,7 @@ export const connect = () => {
         SessionModel,
         ItemModel,
         WeaponModel,
+        ArmorModel,
         ConsumableModel,
     };
 }

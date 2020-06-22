@@ -1,6 +1,8 @@
 import { Document, Model } from "mongoose";
 import { Enemy } from "../../game/model/Enemy";
-import { IItem } from "../items/items.types";
+import { IItem, IWeapon } from "../items/items.types";
+import TelegramBot = require("node-telegram-bot-api");
+import { ItemType } from "../items/items.model";
 
 export interface IPlayer {
     telegram_id: number,
@@ -13,23 +15,32 @@ export interface IPlayer {
     level: number,
     experience: number,
     action_points: number,
+    ap_gain_rate: number,
     money: number,
     inventory: Array<IItem>,
+    equiped_armor: IItem | null,
+    equiped_weapon: IItem | null,
 }
 
 export interface IPlayerDocument extends IPlayer, Document {
     getPlayerStats: (this: IPlayerDocument) => string;
+    getShortStats: (this: IPlayerDocument) => string;
     recalculateAndSave: (this: IPlayerDocument) => void;
     getExpCap: (this: IPlayerDocument) => number;
     getHitDamage: (this: IPlayerDocument) => number;
-    takeDamage: (this: IPlayerDocument, dmg: number) => void;
-    canAttack: (this: IPlayerDocument) => boolean;
+    takeDamage: (this: IPlayerDocument, dmg: number) => number;
+    canAttack: (this: IPlayerDocument, callback_query_id?: string) => boolean;
+    isAlive: (this: IPlayerDocument) => boolean;
     revive: (this: IPlayerDocument) => void;
     passiveRegen: (this: IPlayerDocument, percentage: number) => void;
     gainAP: (this: IPlayerDocument, base_amount?: number) => void;
-    hitEnemy: (this: IPlayerDocument, enemy: Enemy) => void;
-    die: (this: IPlayerDocument) => void;
-    levelUp: (this: IPlayerDocument) => void;
+    hitEnemy: (this: IPlayerDocument, enemy: Enemy) => Promise<void>;
+    die: (this: IPlayerDocument, save?: boolean) => void;
+    levelUp: (this: IPlayerDocument, save?: boolean) => void;
+    sendPlayerStats: (this: IPlayerDocument, message_id: number) => Promise<void>;
+    sendInventory: (this: IPlayerDocument, message_id: number) => void;
+    generateInventoryLayout: (this: IPlayerDocument, item_type: ItemType) => TelegramBot.InlineKeyboardButton[][];
+    getEquipedWeapon: (this: IPlayerDocument) => IWeapon | null;
 }
 
 export interface IPlayerModel extends Model<IPlayerDocument> {
@@ -79,4 +90,9 @@ export interface IPlayerModel extends Model<IPlayerDocument> {
         this: IPlayerModel,
         alive?: boolean,
     ) => Promise<IPlayerDocument[]>;
+
+    getRandomMinMaxLvl: (
+        this: IPlayerModel,
+        chat_id: number
+    ) => Promise<number>;
 }

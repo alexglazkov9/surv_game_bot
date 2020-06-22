@@ -1,5 +1,7 @@
 import { IPlayerDocument, IPlayerModel } from "./players.types";
 import { PlayerModel } from "./players.model";
+import { WeaponModel } from "../items/items.model";
+import { getRandomInt } from "../../utils/utils";
 
 export async function findPlayer(
     this: IPlayerModel, {
@@ -55,7 +57,7 @@ export async function getRandomPlayer(
     if (playersInChat.length === 0) {
         return null;
     }
-    const player = playersInChat[getRandomInt(playersInChat.length)];
+    const player = playersInChat[getRandomInt(0, playersInChat.length)];
     return player;
 }
 
@@ -98,6 +100,22 @@ export async function getAll(
     return playersInChat;
 }
 
-function getRandomInt(max: number): number {
-    return Math.floor(Math.random() * Math.floor(max));
+export async function getRandomMinMaxLvl(
+    this: IPlayerModel,
+    chat_id: number
+): Promise<number> {
+    let playersInChat: IPlayerDocument[];
+    playersInChat = await this.find({ chat_id });
+    let min = Number.MAX_SAFE_INTEGER;
+    let max = 0;
+    playersInChat.forEach((player) => {
+        if (player.level < min) {
+            min = player.level;
+        }
+        if (player.level > max) {
+            max = player.level;
+        }
+    });
+
+    return getRandomInt(min, max + 2);
 }
