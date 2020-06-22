@@ -1,7 +1,7 @@
-import { Enemy } from "./Enemy";
 import { db, bot } from "../../app";
 import * as enemies from "../../database/enemies/enemies.json";
 import { getRandomInt } from "../../utils/utils";
+import { Enemy } from "./Enemy";
 
 export class GameInstance {
     chat_id: number;
@@ -45,7 +45,7 @@ export class GameInstance {
 
     startSpawningEnemies = async () => {
         console.log(this.chat_id + ": Start spawning");
-        let msecs = getRandomInt(15, 90) * 60 * 1000;
+        let msecs = getRandomInt(15, 60) * 60 * 1000;
         console.log(this.chat_id + ": Will be spawned in " + msecs);
         if (this.spawn_timer == undefined) {
             clearTimeout(this.spawn_timer);

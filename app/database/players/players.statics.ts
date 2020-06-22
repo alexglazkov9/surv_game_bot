@@ -13,6 +13,16 @@ export async function findPlayer(
     return player ?? null;
 }
 
+export async function findPlayerByName(
+    this: IPlayerModel, {
+        name,
+        chat_id,
+    }: { name: string, chat_id: number }
+): Promise<IPlayerDocument | null> {
+    const player = await this.findOne({ name, chat_id });
+    return player ?? null;
+}
+
 export async function createNewPlayer(
     this: IPlayerModel,
     {

@@ -11,6 +11,7 @@ export interface IWeapon extends IItem {
     damage: number,
     durability: number,
     ap_cost: number,
+    attack_speed: number,
 }
 
 export interface IArmor extends IItem {

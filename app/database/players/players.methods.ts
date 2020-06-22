@@ -1,10 +1,14 @@
 import { IPlayerDocument } from "./players.types";
 import { bot, db } from "../../app";
-import { Enemy } from "../../game/model/Enemy";
 import TelegramBot = require("node-telegram-bot-api");
-import { IWeaponDocument, IWeapon, IArmor, IArmorDocument } from "../items/items.types";
+import { IWeaponDocument, IWeapon, IArmor, IArmorDocument, IItemModel } from "../items/items.types";
 import { Types } from "mongoose";
 import { ItemType } from "../items/items.model";
+import { Enemy } from "../../game/model/Enemy";
+import { CallbackData } from "../../game/model/CallbackData";
+import { CallbackActions } from "../../game/misc/CallbackConstants";
+
+const DEFAULT_ATTACK_SPEED = 5000;
 
 export function getPlayerStats(this: IPlayerDocument): string {
     let stats_string =
@@ -12,7 +16,6 @@ export function getPlayerStats(this: IPlayerDocument): string {
      💚HP: ${this.health_points.toFixed(1)}\\${this.health_points_max.toFixed(1)}
      🛡Armor: ${this.armor}\\${this.armor_max}
      ❇Exp: ${this.experience.toFixed(1)}\\${this.getExpCap().toFixed(0)}
-     ⚡️ActionPoint: ${this.action_points.toFixed(1)} (${this.ap_gain_rate.toFixed(1)})
      💰Cash: ${this.money.toFixed(2)}
     `;
     return stats_string;
@@ -27,9 +30,10 @@ export function getPlayerInventory(this: IPlayerDocument) {
 
 }
 
-export async function sendPlayerStats(this: IPlayerDocument, message_id: number): Promise<void> {
+export async function sendPlayerStats(this: IPlayerDocument, message_id: number, caller_t_id: number | undefined = undefined): Promise<void> {
     let inline_keyboard_nav: TelegramBot.InlineKeyboardButton[] = [];
-    let data = JSON.stringify({ a: "statsnav", t_id: this.telegram_id, d: "close" });
+    let callback_data = new CallbackData({ action: CallbackActions.PLAYER_STATS_NAV, telegram_id: caller_t_id ?? this.telegram_id, payload: CallbackActions.PLAYERS_STATS_CLOSE });
+    let data = callback_data.toJson();
     inline_keyboard_nav.push({
         text: "❌CLOSE",
         callback_data: data
@@ -52,9 +56,9 @@ export async function sendPlayerStats(this: IPlayerDocument, message_id: number)
         const sender_id = callbackQuery.from.id;
 
         if (action[0] === '{') {
-            const data = JSON.parse(action);
-            if (data.t_id === sender_id && data.a == 'statsnav') {
-                if (data.d === "close") {
+            const data = CallbackData.fromJson(action);
+            if (data.telegram_id === sender_id && data.action == CallbackActions.PLAYER_STATS_NAV) {
+                if (data.payload === CallbackActions.PLAYERS_STATS_CLOSE) {
                     bot.deleteMessage(callbackQuery.message.chat.id, message_id.toString());
                     bot.deleteMessage(callbackQuery.message.chat.id, callbackQuery.message.message_id.toString());
                     bot.removeListener('callback_query', onCallbackQuery);
@@ -79,7 +83,8 @@ export function generateInventoryLayout(this: IPlayerDocument, item_type: ItemTy
         for (let k = 0; k < items_filtered.length && index < items_filtered.length; k++) {
             let row: TelegramBot.InlineKeyboardButton[] = [];
             for (let i = 0; i < num_of_cols && index < items_filtered.length; i++) {
-                let data = JSON.stringify({ a: "inv", t_id: this.telegram_id, i_id: items_filtered[index]._id });
+                let callback_data = new CallbackData({ action: CallbackActions.INVENTORY, telegram_id: this.telegram_id, payload: items_filtered[index]._id });
+                let data = callback_data.toJson();
                 let item = items_filtered[index++];
                 let equiped_item;
                 let btn_txt = '';
@@ -105,17 +110,20 @@ export function generateInventoryLayout(this: IPlayerDocument, item_type: ItemTy
     }
 
     let inline_keyboard_nav: TelegramBot.InlineKeyboardButton[] = [];
-    let data = JSON.stringify({ a: "invnav", t_id: this.telegram_id, d: "prev" });
+    let callback_data = new CallbackData({ action: CallbackActions.INVENTORY_NAV, telegram_id: this.telegram_id, payload: CallbackActions.INVENTORY_NAV_PREV });
+    let data = callback_data.toJson();
     inline_keyboard_nav.push({
         text: "⏪Prev",
         callback_data: data
     });
-    data = JSON.stringify({ a: "invnav", t_id: this.telegram_id, d: "close" });
+    callback_data = new CallbackData({ action: CallbackActions.INVENTORY_NAV, telegram_id: this.telegram_id, payload: CallbackActions.INVENTORY_NAV_CLOSE });
+    data = callback_data.toJson();
     inline_keyboard_nav.push({
         text: "❌CLOSE",
         callback_data: data
     });
-    data = JSON.stringify({ a: "invnav", t_id: this.telegram_id, d: "next" });
+    callback_data = new CallbackData({ action: CallbackActions.INVENTORY_NAV, telegram_id: this.telegram_id, payload: CallbackActions.INVENTORY_NAV_NEXT });
+    data = callback_data.toJson();
     inline_keyboard_nav.push({
         text: "Next⏩",
         callback_data: data
@@ -148,15 +156,15 @@ export async function sendInventory(this: IPlayerDocument, message_id: number) {
         const sender_id = callbackQuery.from.id;
 
         if (action[0] === '{') {
-            const data = JSON.parse(action);
-            if (data.t_id === sender_id) {
+            const data = CallbackData.fromJson(action);
+            if (data.telegram_id === sender_id) {
                 let opts_edit: TelegramBot.EditMessageTextOptions = {};
 
-                switch (data.a) {
-                    case 'inv': {
+                switch (data.action) {
+                    case CallbackActions.INVENTORY: {
                         if (sections[selected_index] == ItemType.WEAPON) {
                             this.inventory.forEach((item) => {
-                                if (item._id == data.i_id) {
+                                if (item._id == data.payload) {
                                     if (this.equiped_weapon?.toString() == item._id.toString()) {
                                         this.equiped_weapon = null;
                                     } else {
@@ -167,7 +175,7 @@ export async function sendInventory(this: IPlayerDocument, message_id: number) {
                             });
                         } else if (sections[selected_index] == ItemType.ARMOR) {
                             this.inventory.forEach((item) => {
-                                if (item._id == data.i_id) {
+                                if (item._id == data.payload) {
                                     if (this.equiped_armor?.toString() == item._id.toString()) {
                                         this.equiped_armor = null;
                                     } else {
@@ -191,10 +199,10 @@ export async function sendInventory(this: IPlayerDocument, message_id: number) {
 
                         break;
                     }
-                    case 'invnav': {
-                        if (data.d === "next") {
+                    case CallbackActions.INVENTORY_NAV: {
+                        if (data.payload === CallbackActions.INVENTORY_NAV_NEXT) {
                             selected_index = ++selected_index % sections.length;
-                        } else if (data.d === "prev") {
+                        } else if (data.payload === CallbackActions.INVENTORY_NAV_PREV) {
                             selected_index--;
                             if (selected_index < 0) {
                                 selected_index = sections.length - 1;
@@ -212,8 +220,9 @@ export async function sendInventory(this: IPlayerDocument, message_id: number) {
                             },
                         };
 
-                        if (data.d === "close") {
+                        if (data.payload === CallbackActions.INVENTORY_NAV_CLOSE) {
                             bot.deleteMessage(callbackQuery.message.chat.id, callbackQuery.message.message_id.toString());
+                            bot.deleteMessage(callbackQuery.message.chat.id, message_id.toString());
                             bot.removeListener('callback_query', onCallbackQuery);
                         }
                         break;
@@ -291,7 +300,7 @@ export function takeDamage(this: IPlayerDocument, dmg: number): number {
 }
 
 export function getExpCap(this: IPlayerDocument): number {
-    return this.level + 10 - 1;
+    return (this.level * 2) + 10 - 2;
 }
 
 export function getHitDamage(this: IPlayerDocument): number {
@@ -304,7 +313,7 @@ export function getHitDamage(this: IPlayerDocument): number {
 }
 
 export async function hitEnemy(this: IPlayerDocument, enemy: Enemy): Promise<void> {
-    enemy.takeDamage(this.getHitDamage());
+    enemy.takeDamage(this);
 
     if (this.equiped_weapon != null) {
         this.inventory.forEach((item, index) => {
@@ -321,20 +330,16 @@ export async function hitEnemy(this: IPlayerDocument, enemy: Enemy): Promise<voi
         this.action_points--;
     }
 
-    if (enemy.hp <= 0) {
-        this.experience += enemy.exp_on_death;
-        this.money += enemy.money_on_death;
-        if (enemy.item_drop) {
-            let item = await db?.ItemModel.findOne({ name: enemy.item_drop });
-            if (item) {
-                item._id = Types.ObjectId();
-                item.isNew = true;
-                this.inventory.push(item);
-            }
-        }
-    }
-
     this.recalculateAndSave();
+}
+
+export async function addItemToInventory(this: IPlayerDocument, item_name: string) {
+    let item = await db?.ItemModel.findOne({ name: item_name });
+    if (item) {
+        item._id = Types.ObjectId();
+        item.isNew = true;
+        this.inventory.push(item);
+    }
 }
 
 export function canAttack(this: IPlayerDocument, callback_query_id: string | null = null): boolean {
@@ -360,6 +365,15 @@ export function canAttack(this: IPlayerDocument, callback_query_id: string | nul
     return this.health_points > 0 && this.action_points > (equiped_weapon ? equiped_weapon?.ap_cost : 1);
 }
 
+export function getAttackSpeed(this: IPlayerDocument): number {
+    let equiped_weapon = this.getEquipedWeapon();
+    if (equiped_weapon) {
+        return equiped_weapon.attack_speed;
+    } else {
+        return DEFAULT_ATTACK_SPEED;
+    }
+}
+
 export function isAlive(this: IPlayerDocument): boolean {
     return this.health_points > 0;
 }
@@ -380,6 +394,11 @@ export function passiveRegen(this: IPlayerDocument, percentage: number): void {
 export function gainAP(this: IPlayerDocument, base_amount: number = 1): void {
     this.action_points += this.ap_gain_rate;
     this.save();
+}
+
+export function gainXP(this: IPlayerDocument, amount: number): void {
+    this.experience += amount;
+    this.levelUp(false);
 }
 
 export function getEquipedWeapon(this: IPlayerDocument): IWeapon | null {

@@ -1,8 +1,8 @@
 import { Document, Model } from "mongoose";
-import { Enemy } from "../../game/model/Enemy";
 import { IItem, IWeapon } from "../items/items.types";
 import TelegramBot = require("node-telegram-bot-api");
 import { ItemType } from "../items/items.model";
+import { Enemy } from "../../game/model/Enemy";
 
 export interface IPlayer {
     telegram_id: number,
@@ -37,10 +37,13 @@ export interface IPlayerDocument extends IPlayer, Document {
     hitEnemy: (this: IPlayerDocument, enemy: Enemy) => Promise<void>;
     die: (this: IPlayerDocument, save?: boolean) => void;
     levelUp: (this: IPlayerDocument, save?: boolean) => void;
-    sendPlayerStats: (this: IPlayerDocument, message_id: number) => Promise<void>;
+    sendPlayerStats: (this: IPlayerDocument, message_id: number, caller_t_id?: number) => Promise<void>;
     sendInventory: (this: IPlayerDocument, message_id: number) => void;
     generateInventoryLayout: (this: IPlayerDocument, item_type: ItemType) => TelegramBot.InlineKeyboardButton[][];
     getEquipedWeapon: (this: IPlayerDocument) => IWeapon | null;
+    getAttackSpeed: (this: IPlayerDocument) => number;
+    addItemToInventory: (this: IPlayerDocument, item_name: string) => Promise<void>;
+    gainXP: (this: IPlayerDocument, amount: number) => void;
 }
 
 export interface IPlayerModel extends Model<IPlayerDocument> {
@@ -51,6 +54,13 @@ export interface IPlayerModel extends Model<IPlayerDocument> {
             chat_id,
         }: { telegram_id: number | undefined, chat_id: number | undefined }
     ) => Promise<IPlayerDocument>;
+
+    findPlayerByName: (
+        this: IPlayerModel, {
+            name,
+            chat_id,
+        }: { name: string, chat_id: number }
+    ) => Promise<IPlayerDocument | null>;
 
     createNewPlayer: (
         this: IPlayerModel,

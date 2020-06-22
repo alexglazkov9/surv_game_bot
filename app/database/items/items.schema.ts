@@ -11,6 +11,7 @@ export const WeaponSchema = new Schema({
     damage: Number,
     durability: Number,
     ap_cost: Number,
+    attack_speed: Number,
 });
 
 export const ArmorSchema = new Schema({

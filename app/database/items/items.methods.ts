@@ -6,17 +6,17 @@ export function getItemStats(this: IItemDocument): string {
     switch (this.__t) {
         case ItemType.WEAPON: {
             let weapon = this as IWeaponDocument;
-            stats_string += `*${weapon.name}* - _${weapon.price}_\n
+            stats_string += `*${weapon.name}* - _$${weapon.price}_\n
                 🗡Dmg: *${weapon.damage}*
                 ⚙️Dur: *${weapon.durability}*
-                ⚡️AP: *${weapon.ap_cost}*
+                ⚡️Speed: *${weapon.attack_speed}*
                 `;
             break;
         }
         case ItemType.ARMOR: {
             let armor = this as IArmorDocument;
-            stats_string += `*${armor.name}* - _${armor.price}_\n
-                🛡Dmg: *${armor.armor}*
+            stats_string += `*${armor.name}* - _$${armor.price}_\n
+                🛡Armor: *${armor.armor}*
                 ⚙️Dur: *${armor.durability}*
                 `;
             break;

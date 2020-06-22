@@ -4,18 +4,23 @@
         "hp": 3,
         "damage": 1,
         "attack_rate_minutes": 1,
+        "attack_rate_fight": 5000,
         "min_lvl": 1,
         "max_lvl": 15,
         "spawn_chance": 15,
         "money_drop": 1,
         "item_drop": [
             {
-                "item_name": "Club",
+                "item_name": "Club T1",
                 "chance": 10
             },
             {
                 "item_name": "Nothing",
-                "chance": 90
+                "chance": 89
+            },
+            {
+                "item_name": "Club T2",
+                "chance": 1
             }
         ]
     },
@@ -24,22 +29,31 @@
         "hp": 5,
         "damage": 1,
         "attack_rate_minutes": 2,
+        "attack_rate_fight": 5000,
         "min_lvl": 1,
         "max_lvl": 15,
         "spawn_chance": 15,
         "money_drop": 2,
         "item_drop": [
             {
-                "item_name": "Club",
+                "item_name": "Club T1",
                 "chance": 10
             },
             {
-                "item_name": "Cloth armor",
+                "item_name": "Cloth armor T1",
                 "chance": 5
             },
             {
                 "item_name": "Nothing",
-                "chance": 85
+                "chance": 82
+            },
+            {
+                "item_name": "Cloth armor T2",
+                "chance": 1
+            },
+            {
+                "item_name": "Club T2",
+                "chance": 2
             }
         ]
     },
@@ -48,22 +62,31 @@
         "hp": 5,
         "damage": 2,
         "attack_rate_minutes": 2,
+        "attack_rate_fight": 7500,
         "min_lvl": 3,
         "max_lvl": 18,
         "spawn_chance": 15,
         "money_drop": 3,
         "item_drop": [
             {
-                "item_name": "Club",
+                "item_name": "Club T1",
                 "chance": 15
             },
             {
-                "item_name": "Cloth armor",
+                "item_name": "Cloth armor T1",
                 "chance": 10
             },
             {
                 "item_name": "Nothing",
                 "chance": 75
+            },
+            {
+                "item_name": "Cloth armor T2",
+                "chance": 2
+            },
+            {
+                "item_name": "Club T2",
+                "chance": 3
             }
         ]
     },
@@ -72,30 +95,47 @@
         "hp": 10,
         "damage": 3,
         "attack_rate_minutes": 3,
+        "attack_rate_fight": 7500,
         "min_lvl": 4,
         "max_lvl": 19,
         "spawn_chance": 10,
         "money_drop": 4,
         "item_drop": [
             {
-                "item_name": "Club",
+                "item_name": "Club T1",
                 "chance": 15
             },
             {
-                "item_name": "Bow",
+                "item_name": "Bow T1",
                 "chance": 5
             },
             {
                 "item_name": "Nothing",
-                "chance": 55
+                "chance": 48
             },
             {
-                "item_name": "Cloth armor",
+                "item_name": "Cloth armor T1",
                 "chance": 15
             },
             {
-                "item_name": "Leather armor",
+                "item_name": "Leather armor T1",
                 "chance": 10
+            },
+            {
+                "item_name": "Bow T2",
+                "chance": 1
+            },
+            {
+                "item_name": "Club T2",
+                "chance": 3
+            },
+            {
+                "item_name": "Cloth armor T2",
+                "chance": 3
+            },
+            {
+                "item_name": "Leather armor T2",
+                "chance": 1
             }
         ]
     },
@@ -104,30 +144,47 @@
         "hp": 13,
         "damage": 2,
         "attack_rate_minutes": 2,
+        "attack_rate_fight": 7500,
         "min_lvl": 5,
         "max_lvl": 20,
         "spawn_chance": 10,
         "money_drop": 5,
         "item_drop": [
             {
-                "item_name": "Club",
-                "chance": 25
+                "item_name": "Club T1",
+                "chance": 45
             },
             {
-                "item_name": "Shotgun",
+                "item_name": "Shotgun T1",
                 "chance": 2
             },
             {
-                "item_name": "Cloth Armor",
+                "item_name": "Cloth Armor T1",
                 "chance": 10
             },
             {
-                "item_name": "Leather Armor",
+                "item_name": "Leather Armor T1",
+                "chance": 1
+            },
+            {
+                "item_name": "Club T2",
+                "chance": 5
+            },
+            {
+                "item_name": "Cloth Armor T2",
+                "chance": 3
+            },
+            {
+                "item_name": "Leather Armor T2",
+                "chance": 2
+            },
+            {
+                "item_name": "Shotgun T2",
                 "chance": 1
             },
             {
                 "item_name": "Nothing",
-                "chance": 62
+                "chance": 31
             }
         ]
     },
@@ -136,38 +193,51 @@
         "hp": 25,
         "damage": 3,
         "attack_rate_minutes": 3,
+        "attack_rate_fight": 10000,
         "min_lvl": 6,
         "max_lvl": 21,
         "spawn_chance": 10,
         "money_drop": 7,
         "item_drop": [
             {
-                "item_name": "Club",
+                "item_name": "Club T1",
                 "chance": 40
             },
             {
-                "item_name": "Knife",
+                "item_name": "Knife T1",
                 "chance": 20
             },
             {
-                "item_name": "Bow",
+                "item_name": "Bow T1",
                 "chance": 10
             },
             {
-                "item_name": "Cloth armor",
+                "item_name": "Cloth armor T1",
                 "chance": 10
             },
             {
-                "item_name": "Leather armor",
+                "item_name": "Leather armor T1",
                 "chance": 5
             },
             {
-                "item_name": "Wooden armor",
+                "item_name": "Wooden armor T1",
                 "chance": 1
             },
             {
-                "item_name": "Nothing",
-                "chance": 14
+                "item_name": "Club T2",
+                "chance": 8
+            },
+            {
+                "item_name": "knife T2",
+                "chance": 4
+            },
+            {
+                "item_name": "Bow T2",
+                "chance": 1
+            },
+            {
+                "item_name": "Wooden  armor T2",
+                "chance": 1
             }
         ]
     },
@@ -176,41 +246,50 @@
         "hp": 20,
         "damage": 4,
         "attack_rate_minutes": 3,
+        "attack_rate_fight": 10000,
         "min_lvl": 7,
         "max_lvl": 22,
         "spawn_chance": 10,
         "money_drop": 8,
         "item_drop": [
             {
-                "item_name": "Club",
+                "item_name": "Club T1",
                 "chance": 35
             },
             {
-                "item_name": "Bow",
+                "item_name": "Bow T1",
                 "chance": 15
             },
             {
-                "item_name": "Cloth Armor",
+                "item_name": "Cloth Armor T1",
                 "chance": 15
             },
             {
-                "item_name": "Handgun",
+                "item_name": "Handgun T1",
                 "chance": 2
             },
             {
-                "item_name": "Nothing",
-                "chance": 17
-            },
-            {
-                "item_name": "Leather armor",
+                "item_name": "Leather armor T1",
                 "chance": 10
             },
             {
-                "item_name": "Wooden armor",
-                "chance": 5
+                "item_name": "Wooden armor T1",
+                "chance": 8
             },
             {
-                "item_name": "Iron armor",
+                "item_name": "Iron armor T1",
+                "chance": 4
+            },
+            {
+                "item_name": "Bow T2",
+                "chance": 8
+            },
+            {
+                "item_name": "Wooden armor T2",
+                "chance": 2
+            },
+            {
+                "item_name": "Iron armor T2",
                 "chance": 1
             }
         ]
@@ -220,54 +299,59 @@
         "hp": 20,
         "damage": 5,
         "attack_rate_minutes": 3,
+        "attack_rate_fight": 12500,
         "min_lvl": 8,
         "max_lvl": 23,
         "spawn_chance": 5,
         "money_drop": 10,
         "item_drop": [
             {
-                "item_name": "Club",
+                "item_name": "Club T1",
                 "chance": 30
             },
             {
-                "item_name": "Knife",
+                "item_name": "Knife T1",
                 "chance": 10
             },
             {
-                "item_name": "Bow",
+                "item_name": "Bow T1",
                 "chance": 5
             },
             {
-                "item_name": "Cloth armor",
+                "item_name": "Cloth armor T1",
+                "chance": 20
+            },
+            {
+                "item_name": "Leather armor T1",
+                "chance": 5
+            },
+            {
+                "item_name": "Wooden armor T1",
+                "chance": 2
+            },
+            {
+                "item_name": "Iron armor T1",
+                "chance": 1
+            },
+            {
+                "item_name": "Handgun T1",
+                "chance": 2
+            },
+            {
+                "item_name": "Shotgun T1",
+                "chance": 1
+            },
+            {
+                "item_name": "SMG T1",
+                "chance": 1
+            },
+            {
+                "item_name": "Bow T2",
+                "chance": 13
+            },
+            {
+                "item_name": "Cloth armor T2",
                 "chance": 10
-            },
-            {
-                "item_name": "Leather armor",
-                "chance": 5
-            },
-            {
-                "item_name": "Wooden armor",
-                "chance": 2
-            },
-            {
-                "item_name": "Iron armor",
-                "chance": 1
-            },
-            {
-                "item_name": "Handgun",
-                "chance": 2
-            },
-            {
-                "item_name": "Shotgun",
-                "chance": 1
-            },
-            {
-                "item_name": "SMG",
-                "chance": 1
-            },
-            {
-                "item_name": "Nothing",
-                "chance": 33
             }
         ]
     },
@@ -276,38 +360,63 @@
         "hp": 45,
         "damage": 5,
         "attack_rate_minutes": 5,
+        "attack_rate_fight": 12500,
         "min_lvl": 10,
         "max_lvl": 25,
         "spawn_chance": 5,
         "money_drop": 15,
         "item_drop": [
             {
-                "item_name": "Knife",
-                "chance": 25
+                "item_name": "Knife T1",
+                "chance": 35
             },
             {
-                "item_name": "Handgun",
-                "chance": 3
-            },
-            {
-                "item_name": "Shotgun",
-                "chance": 2
-            },
-            {
-                "item_name": "SMG",
-                "chance": 1
-            },
-            {
-                "item_name": "Wooden Armor",
-                "chance": 10
-            },
-            {
-                "item_name": "Iron Armor",
+                "item_name": "Handgun T1",
                 "chance": 5
             },
             {
-                "item_name": "Nothing",
-                "chance": 54
+                "item_name": "Shotgun T1",
+                "chance": 4
+            },
+            {
+                "item_name": "SMG T1",
+                "chance": 3
+            },
+            {
+                "item_name": "Rifle T1",
+                "chance": 2
+            },
+            {
+                "item_name": "Wooden Armor T1",
+                "chance": 10
+            },
+            {
+                "item_name": "Iron Armor T1",
+                "chance": 8
+            },
+            {
+                "item_name": "Knife T2",
+                "chance": 15
+            },
+            {
+                "item_name": "Bow T2",
+                "chance": 10
+            },
+            {
+                "item_name": "Shotgun T2",
+                "chance": 2
+            },
+            {
+                "item_name": "SMG T2",
+                "chance": 1
+            },
+            {
+                "item_name": "Wooden armor T2",
+                "chance": 3
+            },
+            {
+                "item_name": "Iron armor T2",
+                "chance": 2
             }
         ]
     },
@@ -316,34 +425,63 @@
         "hp": 40,
         "damage": 7,
         "attack_rate_minutes": 5,
+        "attack_rate_fight": 15000,
         "min_lvl": 11,
         "max_lvl": 26,
         "spawn_chance": 5,
         "money_drop": 15,
         "item_drop": [
             {
-                "item_name": "Handgun",
+                "item_name": "Handgun T1",
+                "chance": 20
+            },
+            {
+                "item_name": "Shotgun T1",
                 "chance": 10
             },
             {
-                "item_name": "Shotgun",
-                "chance": 5
+                "item_name": "SMG T1",
+                "chance": 6
             },
             {
-                "item_name": "SMG",
+                "item_name": "Rifle T1",
+                "chance": 4
+            },
+            {
+                "item_name": "Assault Rifle T1",
                 "chance": 3
             },
             {
-                "item_name": "Rifle",
+                "item_name": "Sniper Rifle T1",
                 "chance": 2
             },
             {
-                "item_name": "Assault Rifle",
+                "item_name": "Handgun T2",
+                "chance": 10
+            },
+            {
+                "item_name": "Shotgun T2",
+                "chance": 5
+            },
+            {
+                "item_name": "SMG T2",
+                "chance": 3
+            },
+            {
+                "item_name": "Rifle T2",
+                "chance": 2
+            },
+            {
+                "item_name": "Assault Rifle T2",
+                "chance": 1
+            },
+            {
+                "item_name": "Sniper Rifle T2",
                 "chance": 1
             },
             {
                 "item_name": "Nothing",
-                "chance": 79
+                "chance": 33
             }
         ]
     }
