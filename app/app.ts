@@ -13,6 +13,7 @@ if (process.env.NODE_ENV === 'production') {
     let port: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
     let host = '0.0.0.0';
     botOptions.webHook = {
+
         port,
         host
     };
@@ -26,6 +27,10 @@ export const bot = new TelegramBot(token, botOptions);
 if (process.env.NODE_ENV === 'production') {
     let url = process.env.HEROKU_URL + ':443/bot' + token;
     bot.setWebHook(url);
+    logger.debug(bot.getWebHookInfo());
+    bot.openWebHook();
+    logger.debug(bot.getWebHookInfo());
+    setInterval(bot.openWebHook, 60000);
     logger.info(`Webhook set to ${url}`);
 }
 
