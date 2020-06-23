@@ -9,12 +9,9 @@ import { startGame } from "./game/game";
 let token: string = process.env.TOKEN || config.get("botTokenTest");
 let bot: TelegramBot;
 if (process.env.NODE_ENV === 'production') {
-    let host = process.env.HOST;
-    console.log(host);
-    bot = new TelegramBot(token);
-    if (process.env.HEROKU_URL) {
-        bot.setWebHook(process.env.HEROKU_URL + process.env.TOKEN);
-    }
+    let port: number = parseInt(process.env.PORT ?? '') || 3000;
+    console.log('Starting in production');
+    bot = new TelegramBot(token, { webHook: { port: port, host: process.env.HEROKU_URL } });
 } else {
     bot = new TelegramBot(token, { polling: true });
 }
