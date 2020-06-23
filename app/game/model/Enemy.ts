@@ -138,9 +138,11 @@ export class Enemy {
     }
 
     handlePlayerAttack = async (player: IPlayerDocument) => {
+        
         if (this.hp > 0 && player.canAttack()) {
             this.combat_log += `🔸 ${player.name}_${player.getShortStats()} deals ${player.getHitDamage().toFixed(1)} damage_\n`;
             await player.hitEnemy(this);
+            console.log('player attacking');
             this.attack_timers_players[player.telegram_id] = setTimeout(this.handlePlayerAttack, player.getAttackSpeed(), player);
         }
     }

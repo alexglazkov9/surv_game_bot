@@ -22,7 +22,7 @@ export function getPlayerStats(this: IPlayerDocument): string {
 }
 
 export function getShortStats(this: IPlayerDocument): string {
-    let stats_string = `(💚${this.health_points.toFixed(1)}⚡️${this.action_points.toFixed(1)})`;
+    let stats_string = `(💚${this.health_points.toFixed(1)})`;
     return stats_string;
 }
 
@@ -319,7 +319,7 @@ export async function hitEnemy(this: IPlayerDocument, enemy: Enemy): Promise<voi
         this.inventory.forEach((item, index) => {
             if (item._id.toString() === this.equiped_weapon?._id.toString()) {
                 (item as IWeapon).durability--;
-                this.action_points -= (item as IWeapon).ap_cost;
+                //this.action_points -= (item as IWeapon).ap_cost;
                 if ((item as IWeapon).durability <= 0) {
                     this.inventory.splice(index, 1);
                     this.equiped_weapon = null;
@@ -327,7 +327,7 @@ export async function hitEnemy(this: IPlayerDocument, enemy: Enemy): Promise<voi
             }
         });
     } else {
-        this.action_points--;
+        //this.action_points--;
     }
 
     this.recalculateAndSave();
@@ -345,14 +345,15 @@ export async function addItemToInventory(this: IPlayerDocument, item_name: strin
 export function canAttack(this: IPlayerDocument, callback_query_id: string | null = null): boolean {
     let equiped_weapon = this.getEquipedWeapon();
     if (callback_query_id) {
-        if (this.action_points < (equiped_weapon ? equiped_weapon?.ap_cost : 1)) {
-            let opts_call: TelegramBot.AnswerCallbackQueryOptions = {
-                callback_query_id: callback_query_id,
-                text: "Not enough AP",
-                show_alert: false,
-            };
-            bot.answerCallbackQuery(opts_call);
-        } else if (!this.isAlive()) {
+        // if (this.action_points < (equiped_weapon ? equiped_weapon?.ap_cost : 1)) {
+        //     let opts_call: TelegramBot.AnswerCallbackQueryOptions = {
+        //         callback_query_id: callback_query_id,
+        //         text: "Not enough AP",
+        //         show_alert: false,
+        //     };
+        //     bot.answerCallbackQuery(opts_call);
+        // } else 
+        if (!this.isAlive()) {
             let opts_call: TelegramBot.AnswerCallbackQueryOptions = {
                 callback_query_id: callback_query_id,
                 text: "You are DEAD",
@@ -362,7 +363,7 @@ export function canAttack(this: IPlayerDocument, callback_query_id: string | nul
         }
     }
 
-    return this.health_points > 0 && this.action_points > (equiped_weapon ? equiped_weapon?.ap_cost : 1);
+    return this.health_points > 0 /*&& this.action_points > (equiped_weapon ? equiped_weapon?.ap_cost : 1)*/;
 }
 
 export function getAttackSpeed(this: IPlayerDocument): number {
