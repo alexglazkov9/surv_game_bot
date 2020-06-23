@@ -4,11 +4,14 @@
   "description": "",
   "main": "app/app.ts",
   "scripts": {
-    "start": "node --inspect=5858 -r ts-node/register ./app/app.ts",
+    "build-ts": "tsc",
+    "postinstall": "npm run build-ts",
+    "start": "npm run serve",
+    "serve": "node build/app.js",
     "dev": "nodemon",
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "script": "cd app/scripts && ts-node-script"
+    "watch-node": "nodemon build/app.js",
+    "script": "cd app/scripts && ts-node-script",
+    "watch-ts": "tsc -w"
   },
   "author": "",
   "license": "ISC",

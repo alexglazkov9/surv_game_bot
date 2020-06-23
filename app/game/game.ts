@@ -1,9 +1,6 @@
 import { bot, db } from "../app";
 import { GameInstance } from "./model/GameInstance";
 import TelegramBot = require("node-telegram-bot-api");
-import { IItemModel, IItemDocument, IWeaponDocument, IWeapon, IWeaponModel } from "../database/items/items.types";
-import { ItemSchema } from "../database/items/items.schema";
-import * as enemies from "../database/enemies/enemies.json";
 import { Types } from "mongoose";
 import { CallbackData } from "./model/CallbackData";
 import { CallbackActions } from "./misc/CallbackConstants";
