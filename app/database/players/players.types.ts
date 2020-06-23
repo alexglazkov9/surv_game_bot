@@ -1,7 +1,5 @@
 import { Document, Model } from "mongoose";
 import { IItem, IWeapon } from "../items/items.types";
-import TelegramBot = require("node-telegram-bot-api");
-import { ItemType } from "../items/items.model";
 import { Enemy } from "../../game/model/Enemy";
 
 export interface IPlayer {
@@ -25,25 +23,24 @@ export interface IPlayer {
 export interface IPlayerDocument extends IPlayer, Document {
     getPlayerStats: (this: IPlayerDocument) => string;
     getShortStats: (this: IPlayerDocument) => string;
-    recalculateAndSave: (this: IPlayerDocument) => void;
+    recalculateAndSave: (this: IPlayerDocument) => Promise<void>;
     getExpCap: (this: IPlayerDocument) => number;
     getHitDamage: (this: IPlayerDocument) => number;
-    takeDamage: (this: IPlayerDocument, dmg: number) => number;
+    takeDamage: (this: IPlayerDocument, dmg: number) => Promise<number>;
     canAttack: (this: IPlayerDocument, callback_query_id?: string) => boolean;
     isAlive: (this: IPlayerDocument) => boolean;
-    revive: (this: IPlayerDocument) => void;
-    passiveRegen: (this: IPlayerDocument, percentage: number) => void;
-    gainAP: (this: IPlayerDocument, base_amount?: number) => void;
+    revive: (this: IPlayerDocument) => Promise<void>;
+    passiveRegen: (this: IPlayerDocument, percentage: number) => Promise<void>;
+    gainAP: (this: IPlayerDocument, base_amount?: number) => Promise<void>;
     hitEnemy: (this: IPlayerDocument, enemy: Enemy) => Promise<void>;
-    die: (this: IPlayerDocument, save?: boolean) => void;
-    levelUp: (this: IPlayerDocument, save?: boolean) => void;
+    die: (this: IPlayerDocument, save?: boolean) => Promise<void>;
+    levelUp: (this: IPlayerDocument, save?: boolean) => Promise<void>;
     sendPlayerStats: (this: IPlayerDocument, message_id: number, caller_t_id?: number) => Promise<void>;
-    sendInventory: (this: IPlayerDocument, message_id: number) => void;
-    generateInventoryLayout: (this: IPlayerDocument, item_type: ItemType) => TelegramBot.InlineKeyboardButton[][];
     getEquipedWeapon: (this: IPlayerDocument) => IWeapon | null;
     getAttackSpeed: (this: IPlayerDocument) => number;
     addItemToInventory: (this: IPlayerDocument, item_name: string) => Promise<void>;
     gainXP: (this: IPlayerDocument, amount: number) => void;
+    saveWithRetries: (this: IPlayerDocument) => Promise<void>;
 }
 
 export interface IPlayerModel extends Model<IPlayerDocument> {

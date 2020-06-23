@@ -27,4 +27,8 @@ export class CallbackData {
 
         return callbackData;
     }
+
+    static createEmpty(): CallbackData {
+        return new CallbackData({ action: 'ignore', telegram_id: undefined, payload: '' });
+    }
 }

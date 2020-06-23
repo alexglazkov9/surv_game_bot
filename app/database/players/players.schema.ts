@@ -1,8 +1,7 @@
-import { Schema, Types, model } from "mongoose";
+import { Schema } from "mongoose";
 import { findPlayer, isNameTaken, createNewPlayer, playerExists, getRandomPlayer, getAllFromChat, getAll, getRandomMinMaxLvl, findPlayerByName } from "./players.statics";
-import { getPlayerStats, recalculateAndSave, getExpCap, getHitDamage, takeDamage, canAttack, revive, passiveRegen, gainAP, hitEnemy, die, levelUp, sendPlayerStats, sendInventory, generateInventoryLayout, getShortStats, isAlive, getEquipedWeapon, getAttackSpeed, addItemToInventory, gainXP } from "./players.methods";
+import { getPlayerStats, recalculateAndSave, getExpCap, getHitDamage, takeDamage, canAttack, revive, passiveRegen, gainAP, hitEnemy, die, levelUp, sendPlayerStats, getShortStats, isAlive, getEquipedWeapon, getAttackSpeed, addItemToInventory, gainXP, saveWithRetries } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
-import { IItemDocument, IItemModel } from "../items/items.types";
 
 const PlayerSchema = new Schema({
     telegram_id: Number,
@@ -64,11 +63,10 @@ PlayerSchema.methods.hitEnemy = hitEnemy;
 PlayerSchema.methods.die = die;
 PlayerSchema.methods.levelUp = levelUp;
 PlayerSchema.methods.sendPlayerStats = sendPlayerStats;
-PlayerSchema.methods.sendInventory = sendInventory;
-PlayerSchema.methods.generateInventoryLayout = generateInventoryLayout;
 PlayerSchema.methods.getEquipedWeapon = getEquipedWeapon;
 PlayerSchema.methods.getAttackSpeed = getAttackSpeed;
 PlayerSchema.methods.addItemToInventory = addItemToInventory;
 PlayerSchema.methods.gainXP = gainXP;
+PlayerSchema.methods.saveWithRetries = saveWithRetries;
 
 export default PlayerSchema;

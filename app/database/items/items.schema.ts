@@ -1,5 +1,4 @@
 import { Schema } from "mongoose";
-import { ItemModel } from "./items.model";
 import { getItemStats } from "./items.methods";
 
 export const ItemSchema = new Schema({

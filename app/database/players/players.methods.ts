@@ -1,12 +1,12 @@
 import { IPlayerDocument } from "./players.types";
 import { bot, db } from "../../app";
 import TelegramBot = require("node-telegram-bot-api");
-import { IWeaponDocument, IWeapon, IArmor, IArmorDocument, IItemModel } from "../items/items.types";
+import { IWeaponDocument, IWeapon, IArmor } from "../items/items.types";
 import { Types } from "mongoose";
-import { ItemType } from "../items/items.model";
 import { Enemy } from "../../game/model/Enemy";
 import { CallbackData } from "../../game/model/CallbackData";
 import { CallbackActions } from "../../game/misc/CallbackConstants";
+import { logger } from "../../utils/logger";
 
 const DEFAULT_ATTACK_SPEED = 5000;
 
@@ -71,173 +71,7 @@ export async function sendPlayerStats(this: IPlayerDocument, message_id: number,
     return Promise.resolve();
 }
 
-//Generate inventory for <item_type>
-export function generateInventoryLayout(this: IPlayerDocument, item_type: ItemType): TelegramBot.InlineKeyboardButton[][] {
-    let inline_keyboard: TelegramBot.InlineKeyboardButton[][] = [];
-    let num_of_cols: number = 2;
-
-    let items_filtered = this.inventory.filter((item) => item.__t == item_type);
-
-    if (items_filtered.length > 0) {
-        let index = 0;
-        for (let k = 0; k < items_filtered.length && index < items_filtered.length; k++) {
-            let row: TelegramBot.InlineKeyboardButton[] = [];
-            for (let i = 0; i < num_of_cols && index < items_filtered.length; i++) {
-                let callback_data = new CallbackData({ action: CallbackActions.INVENTORY, telegram_id: this.telegram_id, payload: items_filtered[index]._id });
-                let data = callback_data.toJson();
-                let item = items_filtered[index++];
-                let equiped_item;
-                let btn_txt = '';
-                if (item_type == ItemType.WEAPON) {
-                    equiped_item = this.equiped_weapon;
-                    btn_txt = `${equiped_item?._id.toString() == item._id.toString() ? "🟢" : ""} ${item.name} (${(item as IWeapon).durability})`;
-                } else if (item_type == ItemType.ARMOR) {
-                    equiped_item = this.equiped_armor;
-                    btn_txt = `${equiped_item?._id.toString() == item._id.toString() ? "🟢" : ""} ${item.name} (${(item as IArmor).durability})`;
-                }
-                row.push({
-                    text: btn_txt,
-                    callback_data: data
-                });
-            }
-            inline_keyboard.push(row);
-        }
-    } else {
-        inline_keyboard[0] = [{
-            text: `SO EMPTY... WOW`,
-            callback_data: "ignore"
-        }]
-    }
-
-    let inline_keyboard_nav: TelegramBot.InlineKeyboardButton[] = [];
-    let callback_data = new CallbackData({ action: CallbackActions.INVENTORY_NAV, telegram_id: this.telegram_id, payload: CallbackActions.INVENTORY_NAV_PREV });
-    let data = callback_data.toJson();
-    inline_keyboard_nav.push({
-        text: "⏪Prev",
-        callback_data: data
-    });
-    callback_data = new CallbackData({ action: CallbackActions.INVENTORY_NAV, telegram_id: this.telegram_id, payload: CallbackActions.INVENTORY_NAV_CLOSE });
-    data = callback_data.toJson();
-    inline_keyboard_nav.push({
-        text: "❌CLOSE",
-        callback_data: data
-    });
-    callback_data = new CallbackData({ action: CallbackActions.INVENTORY_NAV, telegram_id: this.telegram_id, payload: CallbackActions.INVENTORY_NAV_NEXT });
-    data = callback_data.toJson();
-    inline_keyboard_nav.push({
-        text: "Next⏩",
-        callback_data: data
-    });
-
-    return [inline_keyboard_nav, ...inline_keyboard];
-}
-
-export async function sendInventory(this: IPlayerDocument, message_id: number) {
-    let sections = [ItemType.ARMOR, ItemType.WEAPON];
-    let selected_index = 0;
-    let inline_keyboard = this.generateInventoryLayout(sections[selected_index]);
-
-    let opts_send: TelegramBot.SendMessageOptions = {
-        parse_mode: "Markdown",
-        reply_markup: {
-            inline_keyboard: inline_keyboard,
-        },
-    };
-
-    let inv_title = `${this.name}'s inverntory\n`;
-    let section_title = `*${sections[selected_index]}*`;
-    let message_id_sent = (await bot.sendMessage(this.chat_id, inv_title + section_title, opts_send)).message_id;
-
-    const onCallbackQuery = async (callbackQuery: TelegramBot.CallbackQuery) => {
-        if (message_id_sent != callbackQuery.message?.message_id) {
-            return;
-        }
-        const action = callbackQuery.data ?? ' ';
-        const sender_id = callbackQuery.from.id;
-
-        if (action[0] === '{') {
-            const data = CallbackData.fromJson(action);
-            if (data.telegram_id === sender_id) {
-                let opts_edit: TelegramBot.EditMessageTextOptions = {};
-
-                switch (data.action) {
-                    case CallbackActions.INVENTORY: {
-                        if (sections[selected_index] == ItemType.WEAPON) {
-                            this.inventory.forEach((item) => {
-                                if (item._id == data.payload) {
-                                    if (this.equiped_weapon?.toString() == item._id.toString()) {
-                                        this.equiped_weapon = null;
-                                    } else {
-                                        this.equiped_weapon = item._id;
-                                    }
-                                    this.save();
-                                }
-                            });
-                        } else if (sections[selected_index] == ItemType.ARMOR) {
-                            this.inventory.forEach((item) => {
-                                if (item._id == data.payload) {
-                                    if (this.equiped_armor?.toString() == item._id.toString()) {
-                                        this.equiped_armor = null;
-                                    } else {
-                                        this.equiped_armor = item._id;
-                                    }
-                                    this.save();
-                                }
-                            });
-                        }
-
-                        let inline_keyboard = this.generateInventoryLayout(sections[selected_index]);
-
-                        opts_edit = {
-                            parse_mode: "Markdown",
-                            chat_id: this.chat_id,
-                            message_id: callbackQuery.message?.message_id,
-                            reply_markup: {
-                                inline_keyboard: inline_keyboard,
-                            },
-                        };
-
-                        break;
-                    }
-                    case CallbackActions.INVENTORY_NAV: {
-                        if (data.payload === CallbackActions.INVENTORY_NAV_NEXT) {
-                            selected_index = ++selected_index % sections.length;
-                        } else if (data.payload === CallbackActions.INVENTORY_NAV_PREV) {
-                            selected_index--;
-                            if (selected_index < 0) {
-                                selected_index = sections.length - 1;
-                            }
-                        }
-
-                        let inline_keyboard = this.generateInventoryLayout(sections[selected_index]);
-
-                        opts_edit = {
-                            parse_mode: "Markdown",
-                            chat_id: this.chat_id,
-                            message_id: callbackQuery.message?.message_id,
-                            reply_markup: {
-                                inline_keyboard: inline_keyboard,
-                            },
-                        };
-
-                        if (data.payload === CallbackActions.INVENTORY_NAV_CLOSE) {
-                            bot.deleteMessage(callbackQuery.message.chat.id, callbackQuery.message.message_id.toString());
-                            bot.deleteMessage(callbackQuery.message.chat.id, message_id.toString());
-                            bot.removeListener('callback_query', onCallbackQuery);
-                        }
-                        break;
-                    }
-                }
-                section_title = `*${sections[selected_index]}*`;
-                bot.editMessageText(inv_title + section_title, opts_edit);
-            }
-        }
-    }
-
-    bot.on('callback_query', onCallbackQuery);
-}
-
-export function recalculateAndSave(this: IPlayerDocument): void {
+export async function recalculateAndSave(this: IPlayerDocument): Promise<void> {
     if (this.health_points <= 0) {
         this.die();
     }
@@ -246,20 +80,31 @@ export function recalculateAndSave(this: IPlayerDocument): void {
         this.levelUp();
     }
 
-    this.save();
+    logger.debug(`Saving player in recalculateAndSave()`);
+    await this.saveWithRetries();
 }
 
-export function die(this: IPlayerDocument, save: boolean = false): void {
+export async function saveWithRetries(this: IPlayerDocument): Promise<void> {
+    try {
+        logger.debug(`Saving with retries`);
+        await this.save();
+    } catch (e) {
+        logger.debug(`Failed to save, trying again... ${e}`);
+        setTimeout(async () => await this.saveWithRetries(), 1000);
+    }
+}
+
+export async function die(this: IPlayerDocument, save: boolean = false): Promise<void> {
     this.health_points = 0;
     this.action_points /= 2;
     this.experience = 0;
     if (save) {
-        this.save();
+        await this.saveWithRetries();
     }
     bot.sendMessage(this.chat_id, `${this.name} died like a lil bitch`);
 }
 
-export function levelUp(this: IPlayerDocument, save: boolean = false): void {
+export async function levelUp(this: IPlayerDocument, save: boolean = false): Promise<void> {
     while (this.experience >= this.getExpCap()) {
         this.experience -= this.getExpCap();
         this.level++;
@@ -267,11 +112,12 @@ export function levelUp(this: IPlayerDocument, save: boolean = false): void {
         this.ap_gain_rate += 0.1;
     }
     if (save) {
-        this.save();
+        logger.debug(`Saving player in levelUp()`);
+        await this.saveWithRetries();
     }
 }
 
-export function takeDamage(this: IPlayerDocument, dmg: number): number {
+export async function takeDamage(this: IPlayerDocument, dmg: number): Promise<number> {
     //Armor damage reduction
     if (this.equiped_armor != null) {
         this.inventory.find((item, index) => {
@@ -294,7 +140,7 @@ export function takeDamage(this: IPlayerDocument, dmg: number): number {
 
     this.health_points -= dmg;
 
-    this.recalculateAndSave();
+    await this.recalculateAndSave();
 
     return dmg;
 }
@@ -330,7 +176,7 @@ export async function hitEnemy(this: IPlayerDocument, enemy: Enemy): Promise<voi
         //this.action_points--;
     }
 
-    this.recalculateAndSave();
+    await this.recalculateAndSave();
 }
 
 export async function addItemToInventory(this: IPlayerDocument, item_name: string) {
@@ -379,22 +225,25 @@ export function isAlive(this: IPlayerDocument): boolean {
     return this.health_points > 0;
 }
 
-export function revive(this: IPlayerDocument): void {
+export async function revive(this: IPlayerDocument): Promise<void> {
     this.health_points = this.health_points_max / 2;
-    this.save();
+    logger.debug(`Saving player in revive()`);
+    await this.saveWithRetries();
 }
 
-export function passiveRegen(this: IPlayerDocument, percentage: number): void {
+export async function passiveRegen(this: IPlayerDocument, percentage: number): Promise<void> {
     this.health_points += this.health_points_max * (percentage / 100);
     if (this.health_points > this.health_points_max) {
         this.health_points = this.health_points_max;
     }
-    this.save();
+    logger.debug(`Saving player in passiveRegen()`);
+    await this.saveWithRetries();
 }
 
-export function gainAP(this: IPlayerDocument, base_amount: number = 1): void {
+export async function gainAP(this: IPlayerDocument, base_amount: number = 1): Promise<void> {
     this.action_points += this.ap_gain_rate;
-    this.save();
+    logger.debug(`Saving player in gainAp()`);
+    await this.saveWithRetries();
 }
 
 export function gainXP(this: IPlayerDocument, amount: number): void {

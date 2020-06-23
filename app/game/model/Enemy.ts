@@ -4,6 +4,7 @@ import { getRandomInt } from "../../utils/utils";
 import { CallbackData } from "./CallbackData";
 import { CallbackActions } from "../misc/CallbackConstants";
 import { IPlayerDocument } from "../../database/players/players.types";
+import { logger } from "../../utils/logger";
 
 const UPDATE_DELAY = 5000;
 
@@ -93,6 +94,7 @@ export class Enemy {
         this.attack_fight_timer = setInterval(this.dealDamageInFight, this.attack_rate_fight);
         bot.on('callback_query', this.onCallbackQuery);
         this.update_timer = setInterval(() => this.sendUpdate(), UPDATE_DELAY);
+        logger.verbose(`Enemy ${this.name} spawned in ${this.chat_id}`);
         this.dealDamage();
     }
 
@@ -104,7 +106,7 @@ export class Enemy {
 
         if (callback_data.action === CallbackActions.JOIN_FIGHT) {
             let player = await (await db?.PlayerModel.findPlayer({ telegram_id: callbackQuery.from.id, chat_id: this.chat_id }));
-
+            logger.verbose(`Player ${player?.name} joined the fight in ${this.chat_id}`);
             if (player !== undefined) {
                 if (this.players_fighting.findIndex((pl) => { return pl.telegram_id === player?.telegram_id; }) !== -1) {
                     let opts_call: TelegramBot.AnswerCallbackQueryOptions = {
@@ -138,11 +140,10 @@ export class Enemy {
     }
 
     handlePlayerAttack = async (player: IPlayerDocument) => {
-        
         if (this.hp > 0 && player.canAttack()) {
             this.combat_log += `🔸 ${player.name}_${player.getShortStats()} deals ${player.getHitDamage().toFixed(1)} damage_\n`;
             await player.hitEnemy(this);
-            console.log('player attacking');
+            logger.verbose(`Player ${player?.name} in ${this.chat_id} attacked enemy for ${player.getHitDamage().toFixed(1)}`);
             this.attack_timers_players[player.telegram_id] = setTimeout(this.handlePlayerAttack, player.getAttackSpeed(), player);
         }
     }
@@ -152,7 +153,7 @@ export class Enemy {
         if (this.hp <= 0) {
             this.hp = 0;
             this.combat_log += `✨${this.name} _slained by_ ${player.name}_${player.getShortStats()}\n`;
-            
+
             this.despawn();
         }
     }
@@ -161,7 +162,8 @@ export class Enemy {
         let rndIndex = getRandomInt(0, this.players_fighting.length);
         let player = this.players_fighting[rndIndex];
         if (player != undefined) {
-            var dmg_dealt = player.takeDamage(this.damage);
+            var dmg_dealt = await player.takeDamage(this.damage);
+            logger.verbose(`Player ${player?.name} in ${this.chat_id} was damaged in fight for ${dmg_dealt}`);
             this.combat_log += `🔹 ${this.name} _deals ${dmg_dealt.toFixed(1)} damage to_ ${player.name}_${player.getShortStats()}_\n`;
             if (!player.isAlive()) {
                 this.combat_log += `🔹 ${this.name} _murdered_ ${player.name}_${player.getShortStats()}_\n`;
@@ -170,6 +172,7 @@ export class Enemy {
                 this.players_fighting.splice(rndIndex, 1);
 
                 if (this.players_fighting.length === 0) {
+                    logger.verbose(`No more players in ${this.chat_id}, leaving...`);
                     this.despawn();
                 }
             }
@@ -179,8 +182,8 @@ export class Enemy {
     dealDamage = async () => {
         let player = await db?.PlayerModel.getRandomPlayer(this.chat_id, true);
         if (player != null) {
-            var hide_markup = false;
-            var dmg_dealt = player.takeDamage(this.damage);
+            var dmg_dealt = await player.takeDamage(this.damage);
+            logger.verbose(`Player ${player?.name} in ${this.chat_id} was randomly attacked for ${dmg_dealt}`);
 
             this.combat_log += `🔹 ${this.name} _deals ${dmg_dealt.toFixed(1)} damage to_ ${player.name}_${player.getShortStats()}_\n`;
 
@@ -265,24 +268,30 @@ export class Enemy {
 
     rewardPlayers = async (): Promise<void> => {
         let rndIndex = getRandomInt(0, this.players_fighting.length);
-        let player;
+        let player: IPlayerDocument;
         let index = 0;
-        for(player of this.players_fighting){
+        for (player of this.players_fighting) {
             player.money += (this.money_on_death / this.players_fighting.length);
             player.gainXP(this.exp_on_death / this.players_fighting.length);
             if (this.item_drop != null && index === rndIndex) {
                 let player = this.players_fighting[rndIndex];
                 await player.addItemToInventory(this.item_drop);
                 this.combat_log += `🔮${player.name} picks up ${this.item_drop}\n`;
+
+                logger.verbose(`${player.name} picks up ${this.item_drop}`);
             }
-            await player.save();
+            logger.debug(`Saving player in rewardPlayers()`);
+            await player.saveWithRetries();
             index++;
         }
 
-        this.combat_log += `🎁Players get: ${(this.exp_on_death / this.players_fighting.length).toFixed(1)} exp ${this.money_on_death > 0 ? `, ${(this.money_on_death/this.players_fighting.length).toFixed(2)} money` : ""}_\n`
+        logger.verbose(`Players get: ${(this.exp_on_death / this.players_fighting.length).toFixed(1)} exp ${this.money_on_death > 0 ? `, ${(this.money_on_death / this.players_fighting.length).toFixed(2)} money` : ""}_`);
+
+        this.combat_log += `🎁Players get: ${(this.exp_on_death / this.players_fighting.length).toFixed(1)} exp ${this.money_on_death > 0 ? `, ${(this.money_on_death / this.players_fighting.length).toFixed(2)} money` : ""}_\n`
     }
 
     despawn = async (): Promise<void> => {
+        logger.info(`Enemy ${this.name} is despawning...`);
         bot.removeListener('callback_query', this.onCallbackQuery);
 
         this.clearAllIntervals();

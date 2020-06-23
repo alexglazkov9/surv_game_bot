@@ -1,6 +1,5 @@
 import { IPlayerDocument, IPlayerModel } from "./players.types";
 import { PlayerModel } from "./players.model";
-import { WeaponModel } from "../items/items.model";
 import { getRandomInt } from "../../utils/utils";
 
 export async function findPlayer(

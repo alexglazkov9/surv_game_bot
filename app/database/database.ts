@@ -3,11 +3,19 @@ import * as config from "config";
 import { PlayerModel } from "./players/players.model";
 import { SessionModel } from "./sessions/sessions.model";
 import { ItemModel, WeaponModel, ConsumableModel, ArmorModel } from "./items/items.model";
+import { logger } from "../utils/logger";
 
 let database: Mongoose.Connection;
 
 export const connect = () => {
-    const uri: string = config.get("mongoURI");
+    let uri: string;
+    if (process.env.NODE_ENV === 'production') {
+        uri = config.get("mongoURI");
+        logger.info("Connecting to production database");
+    } else {
+        uri = config.get("mongoURITest");
+        logger.info("Connecting to testing database");
+    }
 
     if (database) {
         return;
@@ -23,11 +31,11 @@ export const connect = () => {
     database = Mongoose.connection;
 
     database.once("open", async () => {
-        console.log("Connected to database");
+        logger.info("Connected to database");
     });
 
     database.on("error", () => {
-        console.log("Error connecting to database");
+        logger.error("Error connecting to database");
     });
 
     return {

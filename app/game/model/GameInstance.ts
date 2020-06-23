@@ -2,6 +2,7 @@ import { db, bot } from "../../app";
 import * as enemies from "../../database/enemies/enemies.json";
 import { getRandomInt } from "../../utils/utils";
 import { Enemy } from "./Enemy";
+import { logger } from "../../utils/logger";
 
 export class GameInstance {
     chat_id: number;
@@ -40,18 +41,17 @@ export class GameInstance {
         this.startSpawningEnemies();
         this.startRevivingPlayers();
         this.startHpRegen();
-        this.startApIncome();
+        //this.startApIncome();
     }
 
     startSpawningEnemies = async () => {
-        console.log(this.chat_id + ": Start spawning");
         let msecs = getRandomInt(15, 60) * 60 * 1000;
-        console.log(this.chat_id + ": Will be spawned in " + msecs);
         if (this.spawn_timer == undefined) {
             clearTimeout(this.spawn_timer);
             this.spawn_timer = undefined;
         }
         this.spawn_timer = setTimeout(this.spawnEnemy, msecs);
+        logger.verbose(`Start spawning in ${this.chat_id} in ${msecs / 1000} seconds`);
     }
 
     spawnEnemy = async () => {
@@ -62,12 +62,11 @@ export class GameInstance {
             enemy_type = this.getRndEnemyType();
         }
         let enemy = Enemy.fromJson(enemies[enemy_type], this.chat_id, enemy_level, this.startSpawningEnemies);
-        console.log(this.chat_id + ": Spawning");
+        logger.verbose(`Spawning enemy [${enemy.name}] in ${this.chat_id}`);
         enemy.spawn();
     }
 
     getRndEnemyType = (): number => {
-
         let spawn_probability = getRandomInt(0, 100);
         let enemy_type = 0;
         while (this.spawn_probabilities[enemy_type] <= spawn_probability) {
@@ -91,7 +90,7 @@ export class GameInstance {
             player.revive();
         });
 
-        bot.sendMessage(this.chat_id, `👼🏿All players have been respawned.`);
+        bot.sendMessage(this.chat_id, `👼🏿All players have been respawned.`, { disable_notification: true });
     }
 
     startHpRegen = () => {

@@ -1,5 +1,5 @@
-import { IItemDocument, IWeapon, IWeaponDocument, IArmorDocument } from "./items.types";
-import { ItemType } from "./items.model";
+import { IItemDocument, IWeaponDocument, IArmorDocument } from "./items.types";
+import { ItemType } from "./ItemType";
 
 export function getItemStats(this: IItemDocument): string {
     var stats_string = '';
