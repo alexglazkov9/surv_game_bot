@@ -27,10 +27,12 @@ export const bot = new TelegramBot(token, botOptions);
 if (process.env.NODE_ENV === 'production') {
     let url = process.env.HEROKU_URL + ':443/bot' + token;
     bot.setWebHook(url);
-    logger.debug(bot.getWebHookInfo());
-    bot.openWebHook();
-    logger.debug(bot.getWebHookInfo());
-    setInterval(bot.openWebHook, 60000);
+    bot.getWebHookInfo().then((info) => logger.debug(info));
+    bot.openWebHook().then(() => {
+        bot.getWebHookInfo().then((info) => logger.debug(info));
+    });
+
+    setInterval(() => { bot.getWebHookInfo().then((info) => logger.debug(info)); }, 60000);
     logger.info(`Webhook set to ${url}`);
 }
 
