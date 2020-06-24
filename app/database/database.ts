@@ -9,9 +9,9 @@ let database: Mongoose.Connection;
 
 export const connect = () => {
     let uri: string;
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'staging') {
         uri = config.get("mongoURI");
-        logger.info("Connecting to production database");
+        logger.info("Connecting to staging database");
     } else {
         uri = config.get("mongoURITest");
         logger.info("Connecting to testing database");

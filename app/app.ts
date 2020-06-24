@@ -9,7 +9,7 @@ import TelegramBot = require("node-telegram-bot-api");
 let token: string = process.env.TOKEN || config.get("botTokenTest");
 let botOptions: TelegramBot.ConstructorOptions = {};
 
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'production') {
     let port: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
     botOptions.webHook = {
         port
@@ -21,7 +21,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export const bot = new TelegramBot(token, botOptions);
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'production') {
     let url = process.env.HEROKU_URL + '/bot' + token;
     bot.setWebHook(url);
     logger.info(`Webhook set to ${url}`);
