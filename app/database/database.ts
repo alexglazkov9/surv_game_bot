@@ -1,5 +1,5 @@
-import * as Mongoose from "mongoose";
-import * as config from "config";
+import Mongoose = require("mongoose");
+import config = require("config");
 import { PlayerModel } from "./players/players.model";
 import { SessionModel } from "./sessions/sessions.model";
 import { ItemModel, WeaponModel, ConsumableModel, ArmorModel } from "./items/items.model";

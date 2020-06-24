@@ -1,9 +1,9 @@
-import * as TelegramBot from "node-telegram-bot-api";
-import * as config from "config";
+import config = require("config");
 import { connect } from "./database/database";
-
 import { startGame } from "./game/game";
 import { logger } from "./utils/logger";
+import TelegramBot = require("node-telegram-bot-api");
+
 
 
 let token: string = process.env.TOKEN || config.get("botTokenTest");

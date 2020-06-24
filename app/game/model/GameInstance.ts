@@ -1,5 +1,5 @@
 import { db, bot } from "../../app";
-import * as enemies from "../../database/enemies/enemies.json";
+import enemies = require("../../database/enemies/enemies.json");
 import { getRandomInt } from "../../utils/utils";
 import { Enemy } from "./Enemy";
 import { logger } from "../../utils/logger";
