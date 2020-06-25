@@ -13,7 +13,7 @@
 `npm start`
 
 
-##NPM Commands available
+## NPM Commands available
 
 * `npm run build-ts` - build TypeScript files
 * `mpm start` - calls 'npm run serve'
