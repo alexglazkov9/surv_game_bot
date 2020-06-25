@@ -1,6 +1,6 @@
 import { Document, Model } from "mongoose";
 import { IItem, IWeapon } from "../items/items.types";
-import { Enemy } from "../../game/model/Enemy";
+import { Enemy } from "../../game/models/Enemy";
 
 export interface IPlayer {
     telegram_id: number,
