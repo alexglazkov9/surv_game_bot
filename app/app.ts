@@ -1,4 +1,3 @@
-import config = require("config");
 import { connect } from "./database/database";
 import { logger } from "./utils/logger";
 import TelegramBot = require("node-telegram-bot-api");
@@ -10,18 +9,24 @@ const botOptions: TelegramBot.ConstructorOptions = {};
 if (process.env.NODE_ENV === "production") {
   token = process.env.TOKEN ?? "";
   const port: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
   botOptions.webHook = {
     port,
   };
+
   logger.info(`Production mode: Starting on port ${port}`);
 } else if (process.env.NODE_ENV === "local_prod") {
   token = process.env.TOKEN ?? "";
+
+  botOptions.polling = true;
+
   logger.info("Local prod mode: Starting polling");
-  botOptions.polling = true;
 } else {
-  token = config.get("botTokenTest");
-  logger.info("Dev mode: Starting polling");
+  token = process.env.TELEGRAM_TOKEN_TEST ?? "";
+
   botOptions.polling = true;
+
+  logger.info("Dev mode: Starting polling");
 }
 
 export const bot = new TelegramBot(token, botOptions);

@@ -1,5 +1,0 @@
-{
-    "mongoURI": "mongodb+srv://surv_bot:krevedko16@cluster0-eqk6w.mongodb.net/<dbname>?retryWrites=true&w=majority",
-    "mongoURITest": "mongodb+srv://surv_bot:krevedko16@cluster0-eqk6w.mongodb.net/survgram_test?retryWrites=true&w=majority",
-    "botTokenTest": "1298896056:AAH0bSHhx9Ob54qy90VbcKER3QWYtuX6DFQ"
-}

@@ -1,5 +1,4 @@
 import Mongoose = require("mongoose");
-import config = require("config");
 import { PlayerModel } from "./players/players.model";
 import { SessionModel } from "./sessions/sessions.model";
 import { ItemModel, WeaponModel, ConsumableModel, ArmorModel } from "./items/items.model";
@@ -10,10 +9,12 @@ let database: Mongoose.Connection;
 export const connect = () => {
   let uri: string;
   if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "local_prod") {
-    uri = config.get("mongoURI");
+    uri = process.env.MONGO_URI ?? "";
+
     logger.info("Connecting to prod database");
   } else {
-    uri = config.get("mongoURITest");
+    uri = process.env.MONGO_URI_TEST ?? "";
+
     logger.info("Connecting to testing database");
   }
 
