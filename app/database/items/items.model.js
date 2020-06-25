@@ -1,0 +1,10 @@
+"use strict";
+exports.__esModule = true;
+exports.ConsumableModel = exports.ArmorModel = exports.WeaponModel = exports.ItemModel = void 0;
+var mongoose = require("mongoose");
+var items_schema_1 = require("./items.schema");
+var ItemType_1 = require("./ItemType");
+exports.ItemModel = mongoose.model(ItemType_1.ItemType.ITEM, items_schema_1.ItemSchema);
+exports.WeaponModel = exports.ItemModel.discriminator(ItemType_1.ItemType.WEAPON, items_schema_1.WeaponSchema);
+exports.ArmorModel = exports.ItemModel.discriminator(ItemType_1.ItemType.ARMOR, items_schema_1.ArmorSchema);
+exports.ConsumableModel = exports.ItemModel.discriminator(ItemType_1.ItemType.CONSUMABLE, items_schema_1.ConsumableSchema);

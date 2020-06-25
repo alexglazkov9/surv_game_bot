@@ -5,6 +5,7 @@ import { CallbackData } from "./CallbackData";
 import { CallbackActions } from "../misc/CallbackConstants";
 import { IPlayerDocument } from "../../database/players/players.types";
 import { logger } from "../../utils/logger";
+import EventEmitter = require("events");
 
 const UPDATE_DELAY = 5000;
 
@@ -31,6 +32,8 @@ export class Enemy {
     previous_message?: string;
     on_death: () => void;
 
+    private emitter: EventEmitter.EventEmitter;
+
     constructor({ name, chat_id, hp = 10, level = 1, on_death = () => { }, exp_on_death = 1, money_on_death = 0, damage = 1, attack_rate_minutes = 1 / 6, item_drop_chance = [], attack_rate_fight = 1500 }:
         { name: string, chat_id: number, hp: number, level: number, on_death: () => void, exp_on_death: number, money_on_death: number, damage: number, attack_rate_minutes: number, item_drop_chance: any[], attack_rate_fight: number }) {
         this.id = Date.now();
@@ -48,6 +51,11 @@ export class Enemy {
         this.on_death = on_death;
         this.players_fighting = [];
         this.attack_rate_fight = attack_rate_fight;
+        this.emitter = new EventEmitter.EventEmitter();
+
+        this.emitter.addListener('attack_chat', this.dealDamage);
+        this.emitter.addListener('attack_fight', this.dealDamageInFight);
+        this.emitter.addListener('update', this.sendUpdate);
     }
 
     static fromJson = (json: any, chat_id: number, level: number = 1, on_death: () => void) => {
@@ -90,10 +98,10 @@ export class Enemy {
         var message = await bot.sendMessage(this.chat_id, this.greeting(), opts);
         this.message_id = message.message_id;
 
-        this.attack_timer = setInterval(this.dealDamage, this.attack_rate);
-        this.attack_fight_timer = setInterval(this.dealDamageInFight, this.attack_rate_fight);
+        this.attack_timer = setInterval(() => this.emitter.emit('attack_chat'), this.attack_rate);
+        this.attack_fight_timer = setInterval(() => this.emitter.emit('attack_fight'), this.attack_rate_fight);
         bot.on('callback_query', this.onCallbackQuery);
-        this.update_timer = setInterval(() => this.sendUpdate(), UPDATE_DELAY);
+        this.update_timer = setInterval(() => this.emitter.emit('update'), UPDATE_DELAY);
         logger.verbose(`Enemy ${this.name} spawned in ${this.chat_id}`);
         this.dealDamage();
     }

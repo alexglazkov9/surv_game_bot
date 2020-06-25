@@ -1,6 +1,6 @@
 import { db, bot } from "../../app";
 import enemies = require("../../database/enemies/enemies.json");
-import { getRandomInt } from "../../utils/utils";
+import { getRandomInt, sleep } from "../../utils/utils";
 import { Enemy } from "./Enemy";
 import { logger } from "../../utils/logger";
 
@@ -46,12 +46,16 @@ export class GameInstance {
 
     startSpawningEnemies = async () => {
         let msecs = getRandomInt(15, 60) * 60 * 1000;
-        if (this.spawn_timer == undefined) {
-            clearTimeout(this.spawn_timer);
-            this.spawn_timer = undefined;
-        }
-        this.spawn_timer = setTimeout(this.spawnEnemy, msecs);
         logger.verbose(`Start spawning in ${this.chat_id} in ${msecs / 1000} seconds`);
+        await sleep(msecs);
+        this.spawnEnemy();
+        // let msecs = getRandomInt(15, 60) * 60 * 1000;
+        // if (this.spawn_timer == undefined) {
+        //     clearTimeout(this.spawn_timer);
+        //     this.spawn_timer = undefined;
+        // }
+        // this.spawn_timer = setTimeout(this.spawnEnemy, msecs);
+        // logger.verbose(`Start spawning in ${this.chat_id} in ${msecs / 1000} seconds`);
     }
 
     spawnEnemy = async () => {
