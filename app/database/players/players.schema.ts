@@ -1,39 +1,76 @@
 import { Schema } from "mongoose";
-import { findPlayer, isNameTaken, createNewPlayer, playerExists, getRandomPlayer, getAllFromChat, getAll, getRandomMinMaxLvl, findPlayerByName } from "./players.statics";
-import { getPlayerStats, recalculateAndSave, getExpCap, getHitDamage, takeDamage, canAttack, revive, passiveRegen, gainAP, hitEnemy, die, levelUp, sendPlayerStats, getShortStats, isAlive, getEquipedWeapon, getAttackSpeed, addItemToInventory, gainXP, saveWithRetries } from "./players.methods";
+import {
+  findPlayer,
+  isNameTaken,
+  createNewPlayer,
+  playerExists,
+  getRandomPlayer,
+  getAllFromChat,
+  getAll,
+  getRandomMinMaxLvl,
+  findPlayerByName,
+} from "./players.statics";
+import {
+  getPlayerStats,
+  recalculateAndSave,
+  getExpCap,
+  getHitDamage,
+  takeDamage,
+  canAttack,
+  revive,
+  passiveRegen,
+  gainAP,
+  hitEnemy,
+  die,
+  levelUp,
+  sendPlayerStats,
+  getShortStats,
+  isAlive,
+  getEquipedWeapon,
+  getAttackSpeed,
+  addItemToInventory,
+  gainXP,
+  saveWithRetries,
+} from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
 
 const PlayerSchema = new Schema({
-    telegram_id: Number,
-    chat_id: Number,
-    name: String,
-    health_points_max: { type: Number, default: 10 },
-    health_points: { type: Number, default: 10 },
-    armor_max: { type: Number, default: 0 },
-    armor: { type: Number, default: 0 },
-    level: { type: Number, default: 1 },
-    experience: { type: Number, default: 0 },
-    action_points: { type: Number, default: 10 },
-    ap_gain_rate: { type: Number, default: 1 },
-    money: { type: Number, default: 0 },
-    inventory: {
-        type: [ItemSchema],
-    },
-    equiped_armor: {
-        type: Schema.Types.ObjectId,
-        default: null,
-        //ref: "player.inventory",
-    },
-    equiped_weapon: {
-        type: Schema.Types.ObjectId,
-        default: null,
-        //ref: "player.inventory",
-    },
+  telegram_id: Number,
+  chat_id: Number,
+  name: String,
+  health_points_max: { type: Number, default: 10 },
+  health_points: { type: Number, default: 10 },
+  armor_max: { type: Number, default: 0 },
+  armor: { type: Number, default: 0 },
+  level: { type: Number, default: 1 },
+  experience: { type: Number, default: 0 },
+  action_points: { type: Number, default: 10 },
+  ap_gain_rate: { type: Number, default: 1 },
+  money: { type: Number, default: 0 },
+  inventory: {
+    type: [ItemSchema],
+  },
+  equiped_armor: {
+    type: Schema.Types.ObjectId,
+    default: null,
+    // ref: "player.inventory",
+  },
+  equiped_weapon: {
+    type: Schema.Types.ObjectId,
+    default: null,
+    // ref: "player.inventory",
+  },
 });
 
-(PlayerSchema.path('inventory') as Schema.Types.DocumentArray).discriminator("Weapon", WeaponSchema);
-(PlayerSchema.path('inventory') as Schema.Types.DocumentArray).discriminator("Armor", ArmorSchema);
-(PlayerSchema.path('inventory') as Schema.Types.DocumentArray).discriminator("Consumable", ConsumableSchema);
+(PlayerSchema.path("inventory") as Schema.Types.DocumentArray).discriminator(
+  "Weapon",
+  WeaponSchema
+);
+(PlayerSchema.path("inventory") as Schema.Types.DocumentArray).discriminator("Armor", ArmorSchema);
+(PlayerSchema.path("inventory") as Schema.Types.DocumentArray).discriminator(
+  "Consumable",
+  ConsumableSchema
+);
 
 // (PlayerSchema.path('equiped_weapon') as Schema.Types.DocumentArray).discriminator("Weapon", WeaponSchema);
 // (PlayerSchema.path('equiped_weapon') as Schema.Types.DocumentArray).discriminator("Consumable", ConsumableSchema);

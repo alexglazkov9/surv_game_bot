@@ -8,353 +8,432 @@ import { logger } from "../../utils/logger";
 import { PlayerModel } from "../../database/players/players.model";
 
 const UPDATE_DELAY = 5000;
-const ATTACK_CHAT_EVENT = 'attack_chat_event';
-const ATTACK_FIGHT_EVENT = 'attack_fight_event';
-const ATTACK_BY_PLAYER = 'attack_by_player';
-const UPDATE_EVENT = 'update_event';
+const ATTACK_CHAT_EVENT = "attack_chat_event";
+const ATTACK_FIGHT_EVENT = "attack_fight_event";
+const ATTACK_BY_PLAYER = "attack_by_player";
+const UPDATE_EVENT = "update_event";
+export const ON_DEATH_EVENT = "ON_DEATH_EVENT";
 
 export class Enemy extends EventEmitter.EventEmitter {
-    id: number;
+  id: number;
+  bot: TelegramBot;
+  chatId: number;
+  name: string;
+  level: number;
+  hpMax: number;
+  hp: number;
+  damage: number;
+  messageId?: number;
+  expOnDeath: number;
+  moneyOnDeath: number;
+  combatLog: string;
+  attackRate: number;
+  attackRateFight: number;
+  attackTimer?: NodeJS.Timeout;
+  attackFightTimer?: NodeJS.Timeout;
+  updateTimer?: NodeJS.Timeout;
+  itemDrop: string | null;
+  playersFighting: IPlayerDocument[];
+  attackTimersPlayers: { [id: number]: NodeJS.Timeout } = {};
+  previousMessage?: string;
+
+  constructor({
+    bot,
+    name,
+    chat_id,
+    hp = 10,
+    level = 1,
+    exp_on_death = 1,
+    money_on_death = 0,
+    damage = 1,
+    attack_rate_minutes = 1 / 6,
+    item_drop_chance = [],
+    attack_rate_fight = 1500,
+  }: {
     bot: TelegramBot;
-    chat_id: number;
     name: string;
-    level: number;
-    hp_max: number;
+    chat_id: number;
     hp: number;
-    damage: number;
-    message_id?: number;
+    level: number;
     exp_on_death: number;
     money_on_death: number;
-    combat_log: string;
-    attack_rate: number;
+    damage: number;
+    attack_rate_minutes: number;
+    item_drop_chance: any[];
     attack_rate_fight: number;
-    attack_timer?: NodeJS.Timeout;
-    attack_fight_timer?: NodeJS.Timeout;
-    update_timer?: NodeJS.Timeout;
-    item_drop: string | null;
-    players_fighting: IPlayerDocument[];
-    attack_timers_players: { [id: number]: NodeJS.Timeout } = {};
-    previous_message?: string;
-    on_death: () => void;
+  }) {
+    super();
 
-    constructor({ bot, name, chat_id, hp = 10, level = 1, on_death = () => { }, exp_on_death = 1, money_on_death = 0, damage = 1, attack_rate_minutes = 1 / 6, item_drop_chance = [], attack_rate_fight = 1500 }:
-        { bot: TelegramBot, name: string, chat_id: number, hp: number, level: number, on_death: () => void, exp_on_death: number, money_on_death: number, damage: number, attack_rate_minutes: number, item_drop_chance: any[], attack_rate_fight: number }) {
-        super();
+    this.id = Date.now();
 
-        this.id = Date.now();
+    this.bot = bot;
+    this.chatId = chat_id;
+    this.name = name;
+    this.level = level;
+    this.hpMax = hp;
+    this.hp = hp;
+    this.expOnDeath = exp_on_death;
+    this.moneyOnDeath = money_on_death;
+    this.damage = damage;
+    this.attackRate = attack_rate_minutes * 60 * 1000;
+    this.attackRateFight = attack_rate_fight;
 
-        this.bot = bot;
-        this.chat_id = chat_id;
-        this.name = name;
-        this.level = level;
-        this.hp_max = hp;
-        this.hp = hp;
-        this.exp_on_death = exp_on_death;
-        this.money_on_death = money_on_death;
-        this.damage = damage;
-        this.attack_rate = attack_rate_minutes * 60 * 1000;
-        this.attack_rate_fight = attack_rate_fight;
+    this.itemDrop = this.getDropItem(item_drop_chance);
+    this.combatLog = "\n📜*Combat Log*\n";
+    this.playersFighting = [];
 
-        this.on_death = on_death;
+    this.addListener(ATTACK_CHAT_EVENT, this.dealDamage);
+    this.addListener(ATTACK_FIGHT_EVENT, this.dealDamageInFight);
+    this.addListener(UPDATE_EVENT, this.sendUpdate);
+  }
 
-        this.item_drop = this.getDropItem(item_drop_chance);
-        this.combat_log = '\n📜*Combat Log*\n';
-        this.players_fighting = [];
+  // Creates enemy from json config
+  static fromJson = ({
+    bot,
+    json,
+    chat_id,
+    level = 1,
+  }: {
+    bot: TelegramBot;
+    json: any;
+    chat_id: number;
+    level: number;
+  }) => {
+    const enemy = new Enemy({
+      bot,
+      name: json.name,
+      chat_id,
+      hp: json.hp * (1 + 0.1 * level),
+      level,
+      exp_on_death: (level * json.hp + level * json.damage * 2) / 5,
+      money_on_death: json.money_drop * (1 + 0.1 * level),
+      damage: json.damage * (1 + 0.1 * level),
+      attack_rate_minutes: json.attack_rate_minutes,
+      item_drop_chance: json.item_drop ?? [],
+      attack_rate_fight: json.attack_rate_fight,
+    });
+    return enemy;
+  };
 
-        this.addListener(ATTACK_CHAT_EVENT, this.dealDamage);
-        this.addListener(ATTACK_FIGHT_EVENT, this.dealDamageInFight);
-        this.addListener(UPDATE_EVENT, this.sendUpdate);
-    }
+  spawn = async () => {
+    this.messageId = await this.sendEnemyMessage();
 
-    //Creates enemy from json config
-    static fromJson = ({ bot, json, chat_id, level = 1, on_death }: { bot: TelegramBot, json: any, chat_id: number, level: number, on_death: () => void }) => {
-        let enemy = new Enemy({
-            bot,
-            name: json.name,
-            chat_id,
-            hp: json.hp * (1 + 0.1 * level),
-            level,
-            on_death,
-            exp_on_death: (level * json.hp + level * json.damage * 2) / 5,
-            money_on_death: json.money_drop * (1 + 0.1 * level),
-            damage: json.damage * (1 + 0.1 * level),
-            attack_rate_minutes: json.attack_rate_minutes,
-            item_drop_chance: json.item_drop ?? [],
-            attack_rate_fight: json.attack_rate_fight,
-        });
-        return enemy;
-    }
+    this.bot.on("callback_query", this.onCallbackQuery);
 
-    spawn = async () => {
-        this.message_id = await this.sendEnemyMessage();
+    this.attackTimer = setInterval(() => this.emit(ATTACK_CHAT_EVENT), this.attackRate);
+    this.attackFightTimer = setInterval(() => this.emit(ATTACK_FIGHT_EVENT), this.attackRateFight);
+    this.updateTimer = setInterval(() => this.emit(UPDATE_EVENT), UPDATE_DELAY);
 
-        this.bot.on('callback_query', this.onCallbackQuery);
+    logger.verbose(`Enemy ${this.name} spawned in ${this.chatId}`);
 
-        this.attack_timer = setInterval(() => this.emit(ATTACK_CHAT_EVENT), this.attack_rate);
-        this.attack_fight_timer = setInterval(() => this.emit(ATTACK_FIGHT_EVENT), this.attack_rate_fight);
-        this.update_timer = setInterval(() => this.emit(UPDATE_EVENT), UPDATE_DELAY);
+    // Attack as soon as enemy spawned
+    this.dealDamage();
+  };
 
-        logger.verbose(`Enemy ${this.name} spawned in ${this.chat_id}`);
+  sendEnemyMessage = async (): Promise<number> => {
+    const callbackData = new CallbackData({
+      action: CallbackActions.JOIN_FIGHT,
+      telegram_id: undefined,
+      payload: this.id,
+    });
+    const opts: TelegramBot.SendMessageOptions = {
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Join fight",
+              callback_data: callbackData.toJson(),
+            },
+          ],
+        ],
+      },
+    };
 
-        //Attack as soon as enemy spawned
-        this.dealDamage();
-    }
+    const message = await this.bot.sendMessage(this.chatId, this.greeting(), opts);
+    return message.message_id;
+  };
 
-    sendEnemyMessage = async (): Promise<number> => {
-        let callback_data = new CallbackData({ action: CallbackActions.JOIN_FIGHT, telegram_id: undefined, payload: this.id });
-        let opts: TelegramBot.SendMessageOptions = {
-            parse_mode: "Markdown",
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        {
-                            text: 'Join fight',
-                            callback_data: callback_data.toJson(),
-                        }
-                    ]
-                ]
+  onCallbackQuery = async (callbackQuery: TelegramBot.CallbackQuery) => {
+    const callbackData = CallbackData.fromJson(callbackQuery.data);
+
+    if (callbackData.action === CallbackActions.JOIN_FIGHT) {
+      const player = await await PlayerModel.findPlayer({
+        telegram_id: callbackQuery.from.id,
+        chat_id: this.chatId,
+      });
+      if (player !== undefined) {
+        if (
+          this.playersFighting.findIndex((pl) => {
+            return pl.telegram_id === player?.telegram_id;
+          }) !== -1
+        ) {
+          const optsCall: TelegramBot.AnswerCallbackQueryOptions = {
+            callback_query_id: callbackQuery.id,
+            text: "You are in the fight",
+            show_alert: false,
+          };
+          this.bot.answerCallbackQuery(optsCall);
+          return;
+        } else {
+          let optsCall: TelegramBot.AnswerCallbackQueryOptions;
+          if (player.isAlive()) {
+            // Stop auto-attacking all players
+            if (this.attackTimer !== undefined) {
+              clearInterval(this.attackTimer);
+              this.attackTimer = undefined;
+              this.combatLog += `\n⚔️FIGHT STARTED⚔️\n`;
             }
-        };
-
-        let message = await this.bot.sendMessage(this.chat_id, this.greeting(), opts);
-        return message.message_id;
-    }
-
-    onCallbackQuery = async (callbackQuery: TelegramBot.CallbackQuery) => {
-        const callback_data = CallbackData.fromJson(callbackQuery.data);
-
-        if (callback_data.action === CallbackActions.JOIN_FIGHT) {
-            let player = await (await PlayerModel.findPlayer({ telegram_id: callbackQuery.from.id, chat_id: this.chat_id }));
-            if (player !== undefined) {
-                if (this.players_fighting.findIndex((pl) => { return pl.telegram_id === player?.telegram_id; }) !== -1) {
-                    let opts_call: TelegramBot.AnswerCallbackQueryOptions = {
-                        callback_query_id: callbackQuery.id,
-                        text: "You are in the fight",
-                        show_alert: false,
-                    };
-                    this.bot.answerCallbackQuery(opts_call);
-                    return;
-                } else {
-                    let opts_call: TelegramBot.AnswerCallbackQueryOptions;
-                    if (player.isAlive()) {
-                        //Stop auto-attacking all players
-                        if (this.attack_timer !== undefined) {
-                            clearInterval(this.attack_timer);
-                            this.attack_timer = undefined;
-                            this.combat_log += `\n⚔️FIGHT STARTED⚔️\n`
-                        }
-                        //Add player to the list of attackers
-                        this.players_fighting.push(player);
-                        this.combat_log += `➕${player.name} has joined he fight\n`;
-                        logger.verbose(`Player ${player?.name} joined the fight in ${this.chat_id}`);
-                        //Setup player attack handler
-                        this.addListener(ATTACK_BY_PLAYER + player.telegram_id, () => this.handlePlayerAttack(player));
-                        this.attack_timers_players[player.telegram_id] = setTimeout(() => this.emit(ATTACK_BY_PLAYER + player.telegram_id), player.getAttackSpeed());
-                        opts_call = {
-                            callback_query_id: callbackQuery.id,
-                            text: "You joined the fight",
-                            show_alert: false,
-                        };
-                    }else{
-                        opts_call = {
-                            callback_query_id: callbackQuery.id,
-                            text: "You are DEAD",
-                            show_alert: false,
-                        };
-                    }
-                    this.bot.answerCallbackQuery(opts_call);
-                }
-            }
+            // Add player to the list of attackers
+            this.playersFighting.push(player);
+            this.combatLog += `➕${player.name} has joined he fight\n`;
+            logger.verbose(`Player ${player?.name} joined the fight in ${this.chatId}`);
+            // Setup player attack handler
+            this.addListener(ATTACK_BY_PLAYER + player.telegram_id, () =>
+              this.handlePlayerAttack(player)
+            );
+            this.attackTimersPlayers[player.telegram_id] = setTimeout(
+              () => this.emit(ATTACK_BY_PLAYER + player.telegram_id),
+              player.getAttackSpeed()
+            );
+            optsCall = {
+              callback_query_id: callbackQuery.id,
+              text: "You joined the fight",
+              show_alert: false,
+            };
+          } else {
+            optsCall = {
+              callback_query_id: callbackQuery.id,
+              text: "You are DEAD",
+              show_alert: false,
+            };
+          }
+          this.bot.answerCallbackQuery(optsCall);
         }
+      }
     }
+  };
 
-    handlePlayerAttack = async (player: IPlayerDocument) => {
-        if (this.hp > 0 && player.canAttack()) {
-            this.combat_log += `🔸 ${player.name}_${player.getShortStats()} deals ${player.getHitDamage().toFixed(1)} damage_\n`;
-            await player.hitEnemy(this);
-            logger.verbose(`Player ${player?.name} in ${this.chat_id} attacked enemy for ${player.getHitDamage().toFixed(1)}`);
-            this.attack_timers_players[player.telegram_id] = setTimeout(() => this.emit(ATTACK_BY_PLAYER + player.telegram_id), player.getAttackSpeed());
+  handlePlayerAttack = async (player: IPlayerDocument) => {
+    if (this.hp > 0 && player.canAttack()) {
+      this.combatLog += `🔸 ${
+        player.name
+      }_${player.getShortStats()} deals ${player.getHitDamage().toFixed(1)} damage_\n`;
+      await player.hitEnemy(this);
+      logger.verbose(
+        `Player ${player?.name} in ${
+          this.chatId
+        } attacked enemy for ${player.getHitDamage().toFixed(1)}`
+      );
+      this.attackTimersPlayers[player.telegram_id] = setTimeout(
+        () => this.emit(ATTACK_BY_PLAYER + player.telegram_id),
+        player.getAttackSpeed()
+      );
+    }
+  };
+
+  takeDamage = (player: IPlayerDocument) => {
+    this.hp -= player.getHitDamage();
+    if (this.hp <= 0) {
+      this.hp = 0;
+      this.combatLog += `✨${this.name} _slained by_ ${player.name}_${player.getShortStats()}\n`;
+
+      this.despawn();
+    }
+  };
+
+  dealDamageInFight = async () => {
+    const rndIndex = getRandomInt(0, this.playersFighting.length);
+    const player = this.playersFighting[rndIndex];
+    if (player !== undefined) {
+      const dmgDealt = await player.takeDamage(this.damage);
+      logger.verbose(
+        `Player ${player?.name} in ${this.chatId} was damaged in fight for ${dmgDealt}`
+      );
+      this.combatLog += `🔹 ${this.name} _deals ${dmgDealt.toFixed(1)} damage to_ ${
+        player.name
+      }_${player.getShortStats()}_\n`;
+      if (!player.isAlive()) {
+        this.combatLog += `🔹 ${this.name} _murdered_ ${player.name}_${player.getShortStats()}_\n`;
+
+        clearInterval(this.attackTimersPlayers[player.telegram_id]);
+        this.playersFighting.splice(rndIndex, 1);
+
+        if (this.playersFighting.length === 0) {
+          logger.verbose(`No more players in ${this.chatId}, leaving...`);
+          this.despawn();
         }
+      }
+    }
+  };
+
+  dealDamage = async () => {
+    const player = await PlayerModel.getRandomPlayer(this.chatId, true);
+    if (player != null) {
+      const dmgDealt = await player.takeDamage(this.damage);
+      logger.verbose(
+        `Player ${player?.name} in ${this.chatId} was randomly attacked for ${dmgDealt}`
+      );
+
+      this.combatLog += `🔹 ${this.name} _deals ${dmgDealt.toFixed(1)} damage to_ ${
+        player.name
+      }_${player.getShortStats()}_\n`;
+
+      if (!player.isAlive()) {
+        this.combatLog += `🔹 ${this.name} _murdered_ ${player.name}_${player.getShortStats()}_\n`;
+        this.despawn();
+      }
+    }
+  };
+
+  buildMessageText = (): string => {
+    let messageText = "";
+    messageText += this.stats();
+    messageText += this.combatLog;
+
+    return messageText;
+  };
+
+  getDropItem = (itemDropChance: any[]): string | null => {
+    const itemDropProbabilities: number[] = [];
+    const itemDrops: string[] = [];
+    let prevProbability: number = 0;
+    itemDropChance.forEach((itemChance) => {
+      itemDropProbabilities.push(prevProbability + itemChance.chance);
+      prevProbability += itemChance.chance;
+      itemDrops.push(itemChance.item_name);
+    });
+
+    const dropProbability = getRandomInt(0, 100);
+    let dropType = 0;
+    while (itemDropProbabilities[dropType] <= dropProbability) {
+      dropType++;
     }
 
-    takeDamage = (player: IPlayerDocument) => {
-        this.hp -= player.getHitDamage();
-        if (this.hp <= 0) {
-            this.hp = 0;
-            this.combat_log += `✨${this.name} _slained by_ ${player.name}_${player.getShortStats()}\n`;
+    if (itemDrops[dropType] === "Nothing") return null;
 
-            this.despawn();
-        }
-    }
+    return itemDrops[dropType];
+  };
 
-    dealDamageInFight = async () => {
-        let rndIndex = getRandomInt(0, this.players_fighting.length);
-        let player = this.players_fighting[rndIndex];
-        if (player != undefined) {
-            var dmg_dealt = await player.takeDamage(this.damage);
-            logger.verbose(`Player ${player?.name} in ${this.chat_id} was damaged in fight for ${dmg_dealt}`);
-            this.combat_log += `🔹 ${this.name} _deals ${dmg_dealt.toFixed(1)} damage to_ ${player.name}_${player.getShortStats()}_\n`;
-            if (!player.isAlive()) {
-                this.combat_log += `🔹 ${this.name} _murdered_ ${player.name}_${player.getShortStats()}_\n`;
+  greeting = (): string => {
+    return `Wild *${this.name}* spawned!\n`;
+  };
 
-                clearInterval(this.attack_timers_players[player.telegram_id]);
-                this.players_fighting.splice(rndIndex, 1);
-
-                if (this.players_fighting.length === 0) {
-                    logger.verbose(`No more players in ${this.chat_id}, leaving...`);
-                    this.despawn();
-                }
-            }
-        }
-    }
-
-    dealDamage = async () => {
-        let player = await PlayerModel.getRandomPlayer(this.chat_id, true);
-        if (player != null) {
-            var dmg_dealt = await player.takeDamage(this.damage);
-            logger.verbose(`Player ${player?.name} in ${this.chat_id} was randomly attacked for ${dmg_dealt}`);
-
-            this.combat_log += `🔹 ${this.name} _deals ${dmg_dealt.toFixed(1)} damage to_ ${player.name}_${player.getShortStats()}_\n`;
-
-            if (!player.isAlive()) {
-                this.combat_log += `🔹 ${this.name} _murdered_ ${player.name}_${player.getShortStats()}_\n`;
-                this.despawn();
-            }
-        }
-    }
-
-    buildMessageText = (): string => {
-        var messageText = '';
-        messageText += this.stats();
-        messageText += this.combat_log;
-
-        return messageText;
-    }
-
-    getDropItem = (item_drop_chance: any[]): string | null => {
-        let item_drop_probabilities: number[] = [];
-        let item_drops: string[] = [];
-        let prev_porbability: number = 0;
-        item_drop_chance.forEach((item_chance) => {
-            item_drop_probabilities.push(prev_porbability + item_chance.chance);
-            prev_porbability += item_chance.chance;
-            item_drops.push(item_chance.item_name);
-        });
-
-        let drop_probability = getRandomInt(0, 100);
-        let drop_type = 0;
-        while (item_drop_probabilities[drop_type] <= drop_probability) {
-            drop_type++;
-        }
-
-        if (item_drops[drop_type] == "Nothing")
-            return null;
-
-        return item_drops[drop_type];
-    }
-
-    greeting = (): string => {
-        return `Wild *${this.name}* spawned!\n`;
-    }
-
-    stats = (): string => {
-        return `
+  stats = (): string => {
+    return `
             *${this.name}* - Level ${this.level}\n
-            💚 *HP*: ${this.hp.toFixed(1)}\\${this.hp_max.toFixed(1)}
+            💚 *HP*: ${this.hp.toFixed(1)}\\${this.hpMax.toFixed(1)}
             🗡 *Damage*: ${this.damage.toFixed(1)}
             `;
+  };
+
+  sendUpdate = (hideMarkup = false) => {
+    const callbackData = new CallbackData({
+      action: CallbackActions.JOIN_FIGHT,
+      telegram_id: undefined,
+      payload: this.id,
+    });
+    const opts: TelegramBot.EditMessageTextOptions = {
+      parse_mode: "Markdown",
+      chat_id: this.chatId,
+      message_id: this.messageId,
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Join fight",
+              callback_data: callbackData.toJson(),
+            },
+          ],
+        ],
+      },
+    };
+
+    if (hideMarkup) {
+      delete opts.reply_markup;
     }
 
-    sendUpdate = (hide_markup = false) => {
-        let callback_data = new CallbackData({ action: CallbackActions.JOIN_FIGHT, telegram_id: undefined, payload: this.id });
-        let opts: TelegramBot.EditMessageTextOptions = {
-            parse_mode: "Markdown",
-            chat_id: this.chat_id,
-            message_id: this.message_id,
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        {
-                            text: 'Join fight',
-                            callback_data: callback_data.toJson(),
-                        }
-                    ]
-                ]
-            }
-        };
+    const messageText = this.buildMessageText();
+    if (this.previousMessage === messageText) {
+      return;
+    }
+    this.previousMessage = messageText;
+    this.bot.editMessageText(messageText, opts);
+  };
 
-        if (hide_markup) {
-            delete opts.reply_markup;
-        }
+  rewardPlayers = async (): Promise<void> => {
+    const rndIndex = getRandomInt(0, this.playersFighting.length);
+    let player: IPlayerDocument;
+    let index = 0;
+    for (player of this.playersFighting) {
+      player.money += this.moneyOnDeath / this.playersFighting.length;
+      player.gainXP(this.expOnDeath / this.playersFighting.length);
+      if (this.itemDrop != null && index === rndIndex) {
+        const fightingPlayer = this.playersFighting[rndIndex];
+        await fightingPlayer.addItemToInventory(this.itemDrop);
+        this.combatLog += `🔮${fightingPlayer.name} picks up ${this.itemDrop}\n`;
 
-        let message_text = this.buildMessageText();
-        if (this.previous_message === message_text) {
-            return;
-        }
-        this.previous_message = message_text;
-        this.bot.editMessageText(message_text, opts);
+        logger.verbose(`${fightingPlayer.name} picks up ${this.itemDrop}`);
+      }
+      logger.debug(`Saving player in rewardPlayers()`);
+      await player.saveWithRetries();
+      index++;
     }
 
-    rewardPlayers = async (): Promise<void> => {
-        let rndIndex = getRandomInt(0, this.players_fighting.length);
-        let player: IPlayerDocument;
-        let index = 0;
-        for (player of this.players_fighting) {
-            player.money += (this.money_on_death / this.players_fighting.length);
-            player.gainXP(this.exp_on_death / this.players_fighting.length);
-            if (this.item_drop != null && index === rndIndex) {
-                let player = this.players_fighting[rndIndex];
-                await player.addItemToInventory(this.item_drop);
-                this.combat_log += `🔮${player.name} picks up ${this.item_drop}\n`;
+    logger.verbose(
+      `Players get: ${(this.expOnDeath / this.playersFighting.length).toFixed(1)} exp ${
+        this.moneyOnDeath > 0
+          ? `, ${(this.moneyOnDeath / this.playersFighting.length).toFixed(2)} money`
+          : ""
+      }_`
+    );
 
-                logger.verbose(`${player.name} picks up ${this.item_drop}`);
-            }
-            logger.debug(`Saving player in rewardPlayers()`);
-            await player.saveWithRetries();
-            index++;
-        }
+    this.combatLog += `🎁Players get: ${(this.expOnDeath / this.playersFighting.length).toFixed(
+      1
+    )} exp ${
+      this.moneyOnDeath > 0
+        ? `, ${(this.moneyOnDeath / this.playersFighting.length).toFixed(2)} money`
+        : ""
+    }_\n`;
+  };
 
-        logger.verbose(`Players get: ${(this.exp_on_death / this.players_fighting.length).toFixed(1)} exp ${this.money_on_death > 0 ? `, ${(this.money_on_death / this.players_fighting.length).toFixed(2)} money` : ""}_`);
+  despawn = async (): Promise<void> => {
+    logger.info(`Enemy ${this.name} is despawning...`);
+    this.bot.removeListener("callback_query", this.onCallbackQuery);
 
-        this.combat_log += `🎁Players get: ${(this.exp_on_death / this.players_fighting.length).toFixed(1)} exp ${this.money_on_death > 0 ? `, ${(this.money_on_death / this.players_fighting.length).toFixed(2)} money` : ""}_\n`
+    this.clearAllIntervals();
+
+    this.removeAllListeners(ATTACK_CHAT_EVENT);
+    this.removeAllListeners(ATTACK_FIGHT_EVENT);
+    this.removeAllListeners(UPDATE_EVENT);
+
+    if (this.hp <= 0) {
+      await this.rewardPlayers();
+    } else {
+      this.combatLog += `🔹 ${this.name} _left battle_\n`;
     }
 
-    despawn = async (): Promise<void> => {
-        logger.info(`Enemy ${this.name} is despawning...`);
-        this.bot.removeListener('callback_query', this.onCallbackQuery);
+    this.sendUpdate(true);
 
-        this.clearAllIntervals();
+    this.emit(ON_DEATH_EVENT);
+    this.removeAllListeners(ON_DEATH_EVENT);
+  };
 
-        this.removeAllListeners(ATTACK_CHAT_EVENT);
-        this.removeAllListeners(ATTACK_FIGHT_EVENT);
-        this.removeAllListeners(UPDATE_EVENT);
-
-        if (this.hp <= 0) {
-            await this.rewardPlayers();
-        } else {
-            this.combat_log += `🔹 ${this.name} _left battle_\n`;
-        }
-
-        this.sendUpdate(true);
-
-        this.on_death();
+  clearAllIntervals = (): void => {
+    if (this.attackFightTimer !== undefined) {
+      clearInterval(this.attackFightTimer);
     }
 
-    clearAllIntervals = (): void => {
-        if (this.attack_fight_timer !== undefined) {
-            clearInterval(this.attack_fight_timer);
-        }
-
-        if (this.attack_timer !== undefined) {
-            clearInterval(this.attack_timer);
-        }
-
-        if (this.update_timer !== undefined) {
-            clearInterval(this.update_timer);
-        }
-
-        this.players_fighting.forEach((player) => {
-            clearInterval(this.attack_timers_players[player.telegram_id]);
-        });
+    if (this.attackTimer !== undefined) {
+      clearInterval(this.attackTimer);
     }
+
+    if (this.updateTimer !== undefined) {
+      clearInterval(this.updateTimer);
+    }
+
+    this.playersFighting.forEach((player) => {
+      clearInterval(this.attackTimersPlayers[player.telegram_id]);
+    });
+  };
 }

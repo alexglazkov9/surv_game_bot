@@ -11,7 +11,8 @@
     "dev": "nodemon",
     "watch-node": "nodemon build/app.js",
     "script": "cd app/scripts && ts-node-script",
-    "watch-ts": "tsc -w"
+    "watch-ts": "tsc -w",
+    "lint": "tslint -c tslint.json 'app/**/*.ts'"
   },
   "author": "",
   "license": "ISC",
@@ -27,7 +28,11 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.4",
-    "ts-node": "^8.10.2"
+    "prettier": "^2.0.5",
+    "ts-node": "^8.10.2",
+    "tslint": "^6.1.2",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-plugin-prettier": "^2.3.0"
   },
   "engines": {
     "node": "12.18.0"
