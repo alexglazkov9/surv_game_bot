@@ -11,11 +11,16 @@ import { CallbackData } from "../../game/models/CallbackData";
 const DEFAULT_ATTACK_SPEED = 5000;
 
 export function getPlayerStats(this: IPlayerDocument): string {
+  const equipedWeapon = this.getEquipedWeapon();
+  const equipedArmor = this.getEquipedArmor();
+  logger.debug(equipedArmor);
+  logger.debug(equipedWeapon);
   const statsString = `*${this.name}* - ${this.level} lvl ${
     this.health_points <= 0 ? "💀DEAD💀" : ""
   }\n
      💚HP: ${this.health_points.toFixed(1)}\\${this.health_points_max.toFixed(1)}
-     🛡Armor: ${this.armor}\\${this.armor_max}
+     🛡Armor: ${equipedArmor ? `*${equipedArmor.armor}*(${equipedArmor.durability})` : "0(0)"}
+     🗡Damage: ${equipedWeapon ? `*${equipedWeapon.damage}*(${equipedWeapon.durability})` : "1(∞)"}
      ❇Exp: ${this.experience.toFixed(1)}\\${this.getExpCap().toFixed(0)}
      💰Cash: ${this.money.toFixed(2)}
     `;
@@ -268,6 +273,16 @@ export function getEquipedWeapon(this: IPlayerDocument): IWeapon | null {
       return item._id.toString() === this.equiped_weapon?.toString();
     });
     return weapon as IWeapon;
+  }
+  return null;
+}
+
+export function getEquipedArmor(this: IPlayerDocument): IArmor | null {
+  if (this.equiped_armor) {
+    const armor = this.inventory.find((item) => {
+      return item._id.toString() === this.equiped_armor?.toString();
+    });
+    return armor as IArmor;
   }
   return null;
 }

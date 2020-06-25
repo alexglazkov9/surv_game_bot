@@ -31,6 +31,7 @@ import {
   addItemToInventory,
   gainXP,
   saveWithRetries,
+  getEquipedArmor,
 } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
 
@@ -101,6 +102,7 @@ PlayerSchema.methods.die = die;
 PlayerSchema.methods.levelUp = levelUp;
 PlayerSchema.methods.sendPlayerStats = sendPlayerStats;
 PlayerSchema.methods.getEquipedWeapon = getEquipedWeapon;
+PlayerSchema.methods.getEquipedArmor = getEquipedArmor;
 PlayerSchema.methods.getAttackSpeed = getAttackSpeed;
 PlayerSchema.methods.addItemToInventory = addItemToInventory;
 PlayerSchema.methods.gainXP = gainXP;

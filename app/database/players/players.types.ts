@@ -1,5 +1,5 @@
 import { Document, Model } from "mongoose";
-import { IItem, IWeapon } from "../items/items.types";
+import { IItem, IWeapon, IArmor } from "../items/items.types";
 import { Enemy } from "../../game/models/Enemy";
 
 export interface IPlayer {
@@ -37,6 +37,7 @@ export interface IPlayerDocument extends IPlayer, Document {
   levelUp: (this: IPlayerDocument, save?: boolean) => Promise<void>;
   sendPlayerStats: (this: IPlayerDocument, messageId: number, callerTId?: number) => Promise<void>;
   getEquipedWeapon: (this: IPlayerDocument) => IWeapon | null;
+  getEquipedArmor: (this: IPlayerDocument) => IArmor | null;
   getAttackSpeed: (this: IPlayerDocument) => number;
   addItemToInventory: (this: IPlayerDocument, itemName: string) => Promise<void>;
   gainXP: (this: IPlayerDocument, amount: number) => void;
