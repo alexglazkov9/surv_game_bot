@@ -3,13 +3,17 @@
 ## How to run
 
 1. Install
+
 `npm install`
 
 2. Set env variables
+
 `export TELEGRAM_TOKEN_TEST=<token>`
+
 `export MONGO_URI_TEST=<mongo_uri>`
 
 3. Run
+
 `npm start`
 
 
