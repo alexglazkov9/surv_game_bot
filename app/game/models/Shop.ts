@@ -156,7 +156,7 @@ export class Shop {
         let inlineKeyboardBuyBtn: TelegramBot.InlineKeyboardButton[] = [];
 
         const itemId = data.payload;
-        const item = this.items?.find((itm) => itemId.toString() === itm._id);
+        const item = this.items?.find((itm) => itemId.toString() === itm._id.toString());
 
         const callbackData = new CallbackData({
           action: CallbackActions.SHOP_BUY,
@@ -191,7 +191,7 @@ export class Shop {
         });
 
         const itemId = data.payload;
-        const item = this.items?.find((itm) => itm._id.toString() === itemId);
+        const item = this.items?.find((itm) => itm._id.toString() === itemId.toString());
 
         if (item && player) {
           if (player.money >= item.price) {

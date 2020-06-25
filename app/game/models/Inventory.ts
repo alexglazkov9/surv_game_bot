@@ -187,7 +187,7 @@ export class Inventory {
           case ItemType.WEAPON: {
             if (this.player) {
               this.player.inventory.forEach(async (item) => {
-                if (item._id === itemId) {
+                if (item._id.toString() === itemId) {
                   if (this.player?.equiped_weapon?.toString() === item._id.toString()) {
                     if (this.player !== undefined) this.player.equiped_weapon = null;
                   } else {
@@ -202,7 +202,7 @@ export class Inventory {
           case ItemType.ARMOR: {
             if (this.player) {
               this.player.inventory.forEach(async (item) => {
-                if (item._id === itemId) {
+                if (item._id.toString() === itemId) {
                   if (this.player?.equiped_armor?.toString() === item._id.toString()) {
                     if (this.player !== undefined) this.player.equiped_armor = null;
                   } else {
