@@ -1,16 +1,21 @@
-import { bot, db } from "../../app";
-import TelegramBot = require("node-telegram-bot-api");
+import EventEmitter = require("events");
+import { IPlayerDocument } from "../../database/players/players.types";
 import { getRandomInt } from "../../utils/utils";
 import { CallbackData } from "./CallbackData";
+import TelegramBot = require("node-telegram-bot-api");
 import { CallbackActions } from "../misc/CallbackConstants";
-import { IPlayerDocument } from "../../database/players/players.types";
 import { logger } from "../../utils/logger";
-import EventEmitter = require("events");
+import { PlayerModel } from "../../database/players/players.model";
 
 const UPDATE_DELAY = 5000;
+const ATTACK_CHAT_EVENT = 'attack_chat_event';
+const ATTACK_FIGHT_EVENT = 'attack_fight_event';
+const ATTACK_BY_PLAYER = 'attack_by_player';
+const UPDATE_EVENT = 'update_event';
 
-export class Enemy {
+export class Enemy extends EventEmitter.EventEmitter {
     id: number;
+    bot: TelegramBot;
     chat_id: number;
     name: string;
     level: number;
@@ -28,15 +33,17 @@ export class Enemy {
     update_timer?: NodeJS.Timeout;
     item_drop: string | null;
     players_fighting: IPlayerDocument[];
-    attack_timers_players: { [id: number]: number } = {};
+    attack_timers_players: { [id: number]: NodeJS.Timeout } = {};
     previous_message?: string;
     on_death: () => void;
 
-    private emitter: EventEmitter.EventEmitter;
+    constructor({ bot, name, chat_id, hp = 10, level = 1, on_death = () => { }, exp_on_death = 1, money_on_death = 0, damage = 1, attack_rate_minutes = 1 / 6, item_drop_chance = [], attack_rate_fight = 1500 }:
+        { bot: TelegramBot, name: string, chat_id: number, hp: number, level: number, on_death: () => void, exp_on_death: number, money_on_death: number, damage: number, attack_rate_minutes: number, item_drop_chance: any[], attack_rate_fight: number }) {
+        super();
 
-    constructor({ name, chat_id, hp = 10, level = 1, on_death = () => { }, exp_on_death = 1, money_on_death = 0, damage = 1, attack_rate_minutes = 1 / 6, item_drop_chance = [], attack_rate_fight = 1500 }:
-        { name: string, chat_id: number, hp: number, level: number, on_death: () => void, exp_on_death: number, money_on_death: number, damage: number, attack_rate_minutes: number, item_drop_chance: any[], attack_rate_fight: number }) {
         this.id = Date.now();
+
+        this.bot = bot;
         this.chat_id = chat_id;
         this.name = name;
         this.level = level;
@@ -44,22 +51,25 @@ export class Enemy {
         this.hp = hp;
         this.exp_on_death = exp_on_death;
         this.money_on_death = money_on_death;
-        this.combat_log = '\n📜*Combat Log*\n';
         this.damage = damage;
         this.attack_rate = attack_rate_minutes * 60 * 1000;
-        this.item_drop = this.getDroppedItem(item_drop_chance);
-        this.on_death = on_death;
-        this.players_fighting = [];
         this.attack_rate_fight = attack_rate_fight;
-        this.emitter = new EventEmitter.EventEmitter();
 
-        this.emitter.addListener('attack_chat', this.dealDamage);
-        this.emitter.addListener('attack_fight', this.dealDamageInFight);
-        this.emitter.addListener('update', this.sendUpdate);
+        this.on_death = on_death;
+
+        this.item_drop = this.getDropItem(item_drop_chance);
+        this.combat_log = '\n📜*Combat Log*\n';
+        this.players_fighting = [];
+
+        this.addListener(ATTACK_CHAT_EVENT, this.dealDamage);
+        this.addListener(ATTACK_FIGHT_EVENT, this.dealDamageInFight);
+        this.addListener(UPDATE_EVENT, this.sendUpdate);
     }
 
-    static fromJson = (json: any, chat_id: number, level: number = 1, on_death: () => void) => {
+    //Creates enemy from json config
+    static fromJson = ({ bot, json, chat_id, level = 1, on_death }: { bot: TelegramBot, json: any, chat_id: number, level: number, on_death: () => void }) => {
         let enemy = new Enemy({
+            bot,
             name: json.name,
             chat_id,
             hp: json.hp * (1 + 0.1 * level),
@@ -75,11 +85,22 @@ export class Enemy {
         return enemy;
     }
 
-    /*
-        Sends a mob message to the chat and sets up callback_query 
-        listener that handles attacks from players
-    */
     spawn = async () => {
+        this.message_id = await this.sendEnemyMessage();
+
+        this.bot.on('callback_query', this.onCallbackQuery);
+
+        this.attack_timer = setInterval(() => this.emit(ATTACK_CHAT_EVENT), this.attack_rate);
+        this.attack_fight_timer = setInterval(() => this.emit(ATTACK_FIGHT_EVENT), this.attack_rate_fight);
+        this.update_timer = setInterval(() => this.emit(UPDATE_EVENT), UPDATE_DELAY);
+
+        logger.verbose(`Enemy ${this.name} spawned in ${this.chat_id}`);
+
+        //Attack as soon as enemy spawned
+        this.dealDamage();
+    }
+
+    sendEnemyMessage = async (): Promise<number> => {
         let callback_data = new CallbackData({ action: CallbackActions.JOIN_FIGHT, telegram_id: undefined, payload: this.id });
         let opts: TelegramBot.SendMessageOptions = {
             parse_mode: "Markdown",
@@ -95,26 +116,15 @@ export class Enemy {
             }
         };
 
-        var message = await bot.sendMessage(this.chat_id, this.greeting(), opts);
-        this.message_id = message.message_id;
-
-        this.attack_timer = setInterval(() => this.emitter.emit('attack_chat'), this.attack_rate);
-        this.attack_fight_timer = setInterval(() => this.emitter.emit('attack_fight'), this.attack_rate_fight);
-        bot.on('callback_query', this.onCallbackQuery);
-        this.update_timer = setInterval(() => this.emitter.emit('update'), UPDATE_DELAY);
-        logger.verbose(`Enemy ${this.name} spawned in ${this.chat_id}`);
-        this.dealDamage();
+        let message = await this.bot.sendMessage(this.chat_id, this.greeting(), opts);
+        return message.message_id;
     }
 
-    /*
-        Listens for players' clicks to join the fight
-    */
     onCallbackQuery = async (callbackQuery: TelegramBot.CallbackQuery) => {
         const callback_data = CallbackData.fromJson(callbackQuery.data);
 
         if (callback_data.action === CallbackActions.JOIN_FIGHT) {
-            let player = await (await db?.PlayerModel.findPlayer({ telegram_id: callbackQuery.from.id, chat_id: this.chat_id }));
-            logger.verbose(`Player ${player?.name} joined the fight in ${this.chat_id}`);
+            let player = await (await PlayerModel.findPlayer({ telegram_id: callbackQuery.from.id, chat_id: this.chat_id }));
             if (player !== undefined) {
                 if (this.players_fighting.findIndex((pl) => { return pl.telegram_id === player?.telegram_id; }) !== -1) {
                     let opts_call: TelegramBot.AnswerCallbackQueryOptions = {
@@ -122,26 +132,37 @@ export class Enemy {
                         text: "You are in the fight",
                         show_alert: false,
                     };
-                    bot.answerCallbackQuery(opts_call);
+                    this.bot.answerCallbackQuery(opts_call);
                     return;
                 } else {
-                    //Stop auto-attacking all players
-                    if (this.attack_timer !== undefined) {
-                        clearInterval(this.attack_timer);
-                        this.attack_timer = undefined;
-                        this.combat_log += `\n⚔️FIGHT STARTED⚔️\n`
+                    let opts_call: TelegramBot.AnswerCallbackQueryOptions;
+                    if (player.isAlive()) {
+                        //Stop auto-attacking all players
+                        if (this.attack_timer !== undefined) {
+                            clearInterval(this.attack_timer);
+                            this.attack_timer = undefined;
+                            this.combat_log += `\n⚔️FIGHT STARTED⚔️\n`
+                        }
+                        //Add player to the list of attackers
+                        this.players_fighting.push(player);
+                        this.combat_log += `➕${player.name} has joined he fight\n`;
+                        logger.verbose(`Player ${player?.name} joined the fight in ${this.chat_id}`);
+                        //Setup player attack handler
+                        this.addListener(ATTACK_BY_PLAYER + player.telegram_id, () => this.handlePlayerAttack(player));
+                        this.attack_timers_players[player.telegram_id] = setTimeout(() => this.emit(ATTACK_BY_PLAYER + player.telegram_id), player.getAttackSpeed());
+                        opts_call = {
+                            callback_query_id: callbackQuery.id,
+                            text: "You joined the fight",
+                            show_alert: false,
+                        };
+                    }else{
+                        opts_call = {
+                            callback_query_id: callbackQuery.id,
+                            text: "You are DEAD",
+                            show_alert: false,
+                        };
                     }
-                    //Add player to the list of attackers
-                    this.players_fighting.push(player);
-                    this.combat_log += `➕${player.name} has joined he fight\n`;
-                    //Setup player attack handler
-                    this.attack_timers_players[player.telegram_id] = setTimeout(this.handlePlayerAttack, player.getAttackSpeed(), player);
-                    let opts_call: TelegramBot.AnswerCallbackQueryOptions = {
-                        callback_query_id: callbackQuery.id,
-                        text: "You joined the fight",
-                        show_alert: false,
-                    };
-                    bot.answerCallbackQuery(opts_call);
+                    this.bot.answerCallbackQuery(opts_call);
                 }
             }
         }
@@ -152,7 +173,7 @@ export class Enemy {
             this.combat_log += `🔸 ${player.name}_${player.getShortStats()} deals ${player.getHitDamage().toFixed(1)} damage_\n`;
             await player.hitEnemy(this);
             logger.verbose(`Player ${player?.name} in ${this.chat_id} attacked enemy for ${player.getHitDamage().toFixed(1)}`);
-            this.attack_timers_players[player.telegram_id] = setTimeout(this.handlePlayerAttack, player.getAttackSpeed(), player);
+            this.attack_timers_players[player.telegram_id] = setTimeout(() => this.emit(ATTACK_BY_PLAYER + player.telegram_id), player.getAttackSpeed());
         }
     }
 
@@ -188,7 +209,7 @@ export class Enemy {
     }
 
     dealDamage = async () => {
-        let player = await db?.PlayerModel.getRandomPlayer(this.chat_id, true);
+        let player = await PlayerModel.getRandomPlayer(this.chat_id, true);
         if (player != null) {
             var dmg_dealt = await player.takeDamage(this.damage);
             logger.verbose(`Player ${player?.name} in ${this.chat_id} was randomly attacked for ${dmg_dealt}`);
@@ -210,19 +231,7 @@ export class Enemy {
         return messageText;
     }
 
-    greeting = (): string => {
-        return `Wild *${this.name}* spawned!\n`;
-    }
-
-    stats = (): string => {
-        return `
-            *${this.name}* - Level ${this.level}\n
-            💚 *HP*: ${this.hp.toFixed(1)}\\${this.hp_max.toFixed(1)}
-            🗡 *Damage*: ${this.damage.toFixed(1)}
-            `;
-    }
-
-    getDroppedItem = (item_drop_chance: any[]): string | null => {
+    getDropItem = (item_drop_chance: any[]): string | null => {
         let item_drop_probabilities: number[] = [];
         let item_drops: string[] = [];
         let prev_porbability: number = 0;
@@ -242,6 +251,18 @@ export class Enemy {
             return null;
 
         return item_drops[drop_type];
+    }
+
+    greeting = (): string => {
+        return `Wild *${this.name}* spawned!\n`;
+    }
+
+    stats = (): string => {
+        return `
+            *${this.name}* - Level ${this.level}\n
+            💚 *HP*: ${this.hp.toFixed(1)}\\${this.hp_max.toFixed(1)}
+            🗡 *Damage*: ${this.damage.toFixed(1)}
+            `;
     }
 
     sendUpdate = (hide_markup = false) => {
@@ -271,7 +292,7 @@ export class Enemy {
             return;
         }
         this.previous_message = message_text;
-        bot.editMessageText(message_text, opts);
+        this.bot.editMessageText(message_text, opts);
     }
 
     rewardPlayers = async (): Promise<void> => {
@@ -300,9 +321,13 @@ export class Enemy {
 
     despawn = async (): Promise<void> => {
         logger.info(`Enemy ${this.name} is despawning...`);
-        bot.removeListener('callback_query', this.onCallbackQuery);
+        this.bot.removeListener('callback_query', this.onCallbackQuery);
 
         this.clearAllIntervals();
+
+        this.removeAllListeners(ATTACK_CHAT_EVENT);
+        this.removeAllListeners(ATTACK_FIGHT_EVENT);
+        this.removeAllListeners(UPDATE_EVENT);
 
         if (this.hp <= 0) {
             await this.rewardPlayers();

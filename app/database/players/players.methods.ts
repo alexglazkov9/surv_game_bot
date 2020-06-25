@@ -3,10 +3,10 @@ import { bot, db } from "../../app";
 import TelegramBot = require("node-telegram-bot-api");
 import { IWeaponDocument, IWeapon, IArmor } from "../items/items.types";
 import { Types } from "mongoose";
-import { Enemy } from "../../game/model/Enemy";
-import { CallbackData } from "../../game/model/CallbackData";
 import { CallbackActions } from "../../game/misc/CallbackConstants";
 import { logger } from "../../utils/logger";
+import { Enemy } from "../../game/models/Enemy";
+import { CallbackData } from "../../game/models/CallbackData";
 
 const DEFAULT_ATTACK_SPEED = 5000;
 
