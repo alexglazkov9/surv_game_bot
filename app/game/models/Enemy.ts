@@ -6,6 +6,7 @@ import TelegramBot = require("node-telegram-bot-api");
 import { CallbackActions } from "../misc/CallbackConstants";
 import { logger } from "../../utils/logger";
 import { PlayerModel } from "../../database/players/players.model";
+import { Unit } from "./Unit";
 
 const UPDATE_DELAY = 5000;
 const ATTACK_CHAT_EVENT = "attack_chat_event";
@@ -14,7 +15,7 @@ const ATTACK_BY_PLAYER = "attack_by_player";
 const UPDATE_EVENT = "update_event";
 export const ON_DEATH_EVENT = "ON_DEATH_EVENT";
 
-export class Enemy extends EventEmitter.EventEmitter {
+export class Enemy extends EventEmitter.EventEmitter implements Unit {
   id: number;
   bot: TelegramBot;
   chatId: number;
@@ -27,7 +28,7 @@ export class Enemy extends EventEmitter.EventEmitter {
   expOnDeath: number;
   moneyOnDeath: number;
   combatLog: string;
-  attackRate: number;
+  attackSpeed: number;
   attackRateFight: number;
   attackTimer?: NodeJS.Timeout;
   attackFightTimer?: NodeJS.Timeout;
@@ -75,7 +76,7 @@ export class Enemy extends EventEmitter.EventEmitter {
     this.expOnDeath = exp_on_death;
     this.moneyOnDeath = money_on_death;
     this.damage = damage;
-    this.attackRate = attack_rate_minutes * 60 * 1000;
+    this.attackSpeed = attack_rate_minutes * 60 * 1000;
     this.attackRateFight = attack_rate_fight;
 
     this.itemDrop = this.getDropItem(item_drop_chance);
@@ -120,7 +121,7 @@ export class Enemy extends EventEmitter.EventEmitter {
 
     this.bot.on("callback_query", this.onCallbackQuery);
 
-    this.attackTimer = setInterval(() => this.emit(ATTACK_CHAT_EVENT), this.attackRate);
+    this.attackTimer = setInterval(() => this.emit(ATTACK_CHAT_EVENT), this.attackSpeed);
     this.attackFightTimer = setInterval(() => this.emit(ATTACK_FIGHT_EVENT), this.attackRateFight);
     this.updateTimer = setInterval(() => this.emit(UPDATE_EVENT), UPDATE_DELAY);
 
@@ -435,5 +436,9 @@ export class Enemy extends EventEmitter.EventEmitter {
     this.playersFighting.forEach((player) => {
       clearInterval(this.attackTimersPlayers[player.telegram_id]);
     });
+  };
+
+  getAttackDamage = (): number => {
+    return this.damage;
   };
 }
