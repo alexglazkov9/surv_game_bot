@@ -233,7 +233,7 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
     }
   };
 
-  takeDamage = (player: IPlayerDocument) => {
+  takeIncomingDamage = (player: IPlayerDocument) => {
     this.hp -= player.getHitDamage();
     if (this.hp <= 0) {
       this.hp = 0;
@@ -247,7 +247,7 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
     const rndIndex = getRandomInt(0, this.playersFighting.length);
     const player = this.playersFighting[rndIndex];
     if (player !== undefined) {
-      const dmgDealt = await player.takeDamage(this.damage);
+      const dmgDealt = await player.takeIncomingDamage(this.damage);
       logger.verbose(
         `Player ${player?.name} in ${this.chatId} was damaged in fight for ${dmgDealt}`
       );
@@ -271,7 +271,7 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
   dealDamage = async () => {
     const player = await PlayerModel.getRandomPlayer(this.chatId, true);
     if (player != null) {
-      const dmgDealt = await player.takeDamage(this.damage);
+      const dmgDealt = await player.takeIncomingDamage(this.damage);
       logger.verbose(
         `Player ${player?.name} in ${this.chatId} was randomly attacked for ${dmgDealt}`
       );

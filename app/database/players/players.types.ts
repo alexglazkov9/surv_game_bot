@@ -1,6 +1,7 @@
 import { Document, Model } from "mongoose";
 import { IItem, IWeapon, IArmor } from "../items/items.types";
 import { Enemy } from "../../game/models/Enemy";
+import { Unit } from "../../game/models/Unit";
 
 export interface IPlayer {
   telegram_id: number;
@@ -20,7 +21,7 @@ export interface IPlayer {
   equiped_weapon: IItem | null;
 }
 
-export interface IPlayerDocument extends IPlayer, Document {
+export interface IPlayerDocument extends IPlayer, Document, Unit {
   getPlayerStats: (this: IPlayerDocument) => string;
   getShortStats: (this: IPlayerDocument) => string;
   recalculateAndSave: (this: IPlayerDocument) => Promise<void>;
@@ -44,7 +45,7 @@ export interface IPlayerDocument extends IPlayer, Document {
   saveWithRetries: (this: IPlayerDocument) => Promise<void>;
 }
 
-export interface IPlayerModel extends Model<IPlayerDocument> {
+export interface IPlayerModel extends Model<IPlayerDocument>{
   findPlayer: (
     this: IPlayerModel,
     { telegram_id, chat_id }: { telegram_id: number | undefined; chat_id: number | undefined }
