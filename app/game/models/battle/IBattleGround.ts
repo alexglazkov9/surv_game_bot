@@ -1,9 +1,9 @@
-import { Unit } from "../Unit";
+import { IUnit } from "../units/IUnit";
 
 export interface IBattleGround {
   chatId: number;
-  teamA: Unit[];
-  teamB: Unit[];
+  teamA: IUnit[];
+  teamB: IUnit[];
 
   startBattle(): void;
 }

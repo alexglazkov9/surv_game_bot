@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger";
 
 import enemies = require("../../database/enemies/enemies.json");
 import { getRandomInt, sleep } from "../../utils/utils";
+import { NPCBattle } from "./battle/NPCBattle";
 
 const RESPAWN_RATE = 60 * 60 * 1000;
 const HP_REGEN_RATE = 60 * 60 * 1000;
@@ -38,9 +39,12 @@ export class GameInstance {
 
   spawnEnemy = async () => {
     const enemy = await this.getRandomEnemy();
+    const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
+    battle.addToNPCTeam(enemy);
+    battle.startBattle();
     logger.verbose(`Spawning enemy [${enemy.name}] in ${this.chatId}`);
-    enemy.spawn();
-    enemy.addListener(ON_DEATH_EVENT, this.startSpawning);
+    //enemy.spawn();
+    //enemy.addListener(ON_DEATH_EVENT, this.startSpawning);
   };
 
   getRandomEnemy = async (): Promise<Enemy> => {

@@ -6,7 +6,9 @@ import TelegramBot = require("node-telegram-bot-api");
 import { CallbackActions } from "../misc/CallbackConstants";
 import { logger } from "../../utils/logger";
 import { PlayerModel } from "../../database/players/players.model";
-import { Unit } from "./Unit";
+import { IUnit } from "./units/IUnit";
+import { BattleEvents } from "./battle/BattleEvents";
+import { INPCUnit } from "./units/INPCUnit";
 
 const UPDATE_DELAY = 5000;
 const ATTACK_CHAT_EVENT = "attack_chat_event";
@@ -15,7 +17,7 @@ const ATTACK_BY_PLAYER = "attack_by_player";
 const UPDATE_EVENT = "update_event";
 export const ON_DEATH_EVENT = "ON_DEATH_EVENT";
 
-export class Enemy extends EventEmitter.EventEmitter implements Unit {
+export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
   id: number;
   bot: TelegramBot;
   chatId: number;
@@ -28,8 +30,8 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
   expOnDeath: number;
   moneyOnDeath: number;
   combatLog: string;
-  attackSpeed: number;
-  attackRateFight: number;
+  attackSpeedPreFight: number;
+  attackRateInFight: number;
   attackTimer?: NodeJS.Timeout;
   attackFightTimer?: NodeJS.Timeout;
   updateTimer?: NodeJS.Timeout;
@@ -37,6 +39,7 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
   playersFighting: IPlayerDocument[];
   attackTimersPlayers: { [id: number]: NodeJS.Timeout } = {};
   previousMessage?: string;
+  preFightAttackTimer?: NodeJS.Timeout;
 
   constructor({
     bot,
@@ -76,8 +79,8 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
     this.expOnDeath = exp_on_death;
     this.moneyOnDeath = money_on_death;
     this.damage = damage;
-    this.attackSpeed = attack_rate_minutes * 60 * 1000;
-    this.attackRateFight = attack_rate_fight;
+    this.attackSpeedPreFight = attack_rate_minutes * 60 * 1000;
+    this.attackRateInFight = attack_rate_fight;
 
     this.itemDrop = this.getDropItem(item_drop_chance);
     this.combatLog = "\n📜*Combat Log*\n";
@@ -121,8 +124,11 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
 
     this.bot.on("callback_query", this.onCallbackQuery);
 
-    this.attackTimer = setInterval(() => this.emit(ATTACK_CHAT_EVENT), this.attackSpeed);
-    this.attackFightTimer = setInterval(() => this.emit(ATTACK_FIGHT_EVENT), this.attackRateFight);
+    this.attackTimer = setInterval(() => this.emit(ATTACK_CHAT_EVENT), this.attackSpeedPreFight);
+    this.attackFightTimer = setInterval(
+      () => this.emit(ATTACK_FIGHT_EVENT),
+      this.attackRateInFight
+    );
     this.updateTimer = setInterval(() => this.emit(UPDATE_EVENT), UPDATE_DELAY);
 
     logger.verbose(`Enemy ${this.name} spawned in ${this.chatId}`);
@@ -219,7 +225,7 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
     if (this.hp > 0 && player.canAttack()) {
       this.combatLog += `🔸 ${
         player.name
-      }_${player.getShortStats()} deals ${player.getHitDamage().toFixed(1)} damage_\n`;
+      }_${player.getMinStats()} deals ${player.getHitDamage().toFixed(1)} damage_\n`;
       await player.hitEnemy(this);
       logger.verbose(
         `Player ${player?.name} in ${
@@ -237,7 +243,7 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
     this.hp -= player.getHitDamage();
     if (this.hp <= 0) {
       this.hp = 0;
-      this.combatLog += `✨${this.name} _slained by_ ${player.name}_${player.getShortStats()}\n`;
+      this.combatLog += `✨${this.name} _slained by_ ${player.name}_${player.getMinStats()}\n`;
 
       this.despawn();
     }
@@ -247,15 +253,15 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
     const rndIndex = getRandomInt(0, this.playersFighting.length);
     const player = this.playersFighting[rndIndex];
     if (player !== undefined) {
-      const dmgDealt = await player.takeIncomingDamage(this.damage);
+      const dmgDealt = await player.takeDamage(this.damage);
       logger.verbose(
         `Player ${player?.name} in ${this.chatId} was damaged in fight for ${dmgDealt}`
       );
       this.combatLog += `🔹 ${this.name} _deals ${dmgDealt.toFixed(1)} damage to_ ${
         player.name
-      }_${player.getShortStats()}_\n`;
+      }_${player.getMinStats()}_\n`;
       if (!player.isAlive()) {
-        this.combatLog += `🔹 ${this.name} _murdered_ ${player.name}_${player.getShortStats()}_\n`;
+        this.combatLog += `🔹 ${this.name} _murdered_ ${player.name}_${player.getMinStats()}_\n`;
 
         clearInterval(this.attackTimersPlayers[player.telegram_id]);
         this.playersFighting.splice(rndIndex, 1);
@@ -271,17 +277,17 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
   dealDamage = async () => {
     const player = await PlayerModel.getRandomPlayer(this.chatId, true);
     if (player != null) {
-      const dmgDealt = await player.takeIncomingDamage(this.damage);
+      const dmgDealt = await player.takeDamage(this.damage);
       logger.verbose(
         `Player ${player?.name} in ${this.chatId} was randomly attacked for ${dmgDealt}`
       );
 
       this.combatLog += `🔹 ${this.name} _deals ${dmgDealt.toFixed(1)} damage to_ ${
         player.name
-      }_${player.getShortStats()}_\n`;
+      }_${player.getMinStats()}_\n`;
 
       if (!player.isAlive()) {
-        this.combatLog += `🔹 ${this.name} _murdered_ ${player.name}_${player.getShortStats()}_\n`;
+        this.combatLog += `🔹 ${this.name} _murdered_ ${player.name}_${player.getMinStats()}_\n`;
         this.despawn();
       }
     }
@@ -438,7 +444,66 @@ export class Enemy extends EventEmitter.EventEmitter implements Unit {
     });
   };
 
+  // Unit interface methods
+  startAttacking = () => {
+    if (this.attackTimer !== undefined) {
+      this.stopAttacking();
+    }
+    this.attackTimer = setInterval(
+      () => this.emit(BattleEvents.UNIT_ATTACKS),
+      this.attackRateInFight
+    );
+  };
+
+  startAttackingPreFight = (): void => {
+    if (this.attackTimer !== undefined) {
+      this.stopAttacking();
+    }
+    this.preFightAttackTimer = setInterval(
+      () => this.emit(BattleEvents.UNIT_ATTACKS),
+      this.attackSpeedPreFight
+    );
+  };
+
+  stopAttacking = (): void => {
+    if (this.attackTimer !== undefined) {
+      clearInterval(this.attackTimer);
+      this.attackTimer = undefined;
+    }
+  };
+
+  attack = (target: IUnit): number => {
+    target.takeDamage(this.getAttackDamage());
+    return this.getAttackDamage();
+  };
+
   getAttackDamage = (): number => {
     return this.damage;
+  };
+
+  getAttackSpeed = (): number => {
+    return this.attackRateInFight;
+  };
+
+  getName = (): string => {
+    return this.name;
+  };
+
+  takeDamage = (dmg: number) => {
+    this.hp -= dmg;
+    if (this.hp < 0) {
+      this.hp = 0;
+    }
+  };
+
+  isAlive = (): boolean => {
+    return this.hp > 0;
+  };
+
+  getShortStats = (): string => {
+    const statsText = `${this.name} - ${this.level} - 💚${this.hp.toFixed(1)}\\${this.hpMax.toFixed(
+      1
+    )} 🗡${this.damage.toFixed(1)}`;
+    return statsText;
   };
 }

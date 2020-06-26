@@ -24,7 +24,7 @@ import {
   die,
   levelUp,
   sendPlayerStats,
-  getShortStats,
+  getMinStats,
   isAlive,
   getEquipedWeapon,
   getAttackSpeed,
@@ -32,6 +32,12 @@ import {
   gainXP,
   saveWithRetries,
   getEquipedArmor,
+  getAttackDamage,
+  attack,
+  startAttacking,
+  getShortStats,
+  getName,
+  stopAttacking,
 } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
 
@@ -87,6 +93,7 @@ PlayerSchema.statics.getAll = getAll;
 PlayerSchema.statics.getRandomMinMaxLvl = getRandomMinMaxLvl;
 
 PlayerSchema.methods.getPlayerStats = getPlayerStats;
+PlayerSchema.methods.getMinStats = getMinStats;
 PlayerSchema.methods.getShortStats = getShortStats;
 PlayerSchema.methods.recalculateAndSave = recalculateAndSave;
 PlayerSchema.methods.getExpCap = getExpCap;
@@ -107,5 +114,11 @@ PlayerSchema.methods.getAttackSpeed = getAttackSpeed;
 PlayerSchema.methods.addItemToInventory = addItemToInventory;
 PlayerSchema.methods.gainXP = gainXP;
 PlayerSchema.methods.saveWithRetries = saveWithRetries;
+//IUnit
+PlayerSchema.methods.getAttackDamage = getAttackDamage;
+PlayerSchema.methods.getName = getName;
+PlayerSchema.methods.attack = attack;
+PlayerSchema.methods.startAttacking = startAttacking;
+PlayerSchema.methods.stopAttacking = stopAttacking;
 
 export default PlayerSchema;

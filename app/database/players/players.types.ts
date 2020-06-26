@@ -1,7 +1,7 @@
 import { Document, Model } from "mongoose";
 import { IItem, IWeapon, IArmor } from "../items/items.types";
 import { Enemy } from "../../game/models/Enemy";
-import { Unit } from "../../game/models/Unit";
+import { IUnit } from "../../game/models/units/IUnit";
 
 export interface IPlayer {
   telegram_id: number;
@@ -21,8 +21,9 @@ export interface IPlayer {
   equiped_weapon: IItem | null;
 }
 
-export interface IPlayerDocument extends IPlayer, Document, Unit {
+export interface IPlayerDocument extends IPlayer, Document, IUnit {
   getPlayerStats: (this: IPlayerDocument) => string;
+  getMinStats: (this: IPlayerDocument) => string;
   getShortStats: (this: IPlayerDocument) => string;
   recalculateAndSave: (this: IPlayerDocument) => Promise<void>;
   getExpCap: (this: IPlayerDocument) => number;
@@ -43,9 +44,15 @@ export interface IPlayerDocument extends IPlayer, Document, Unit {
   addItemToInventory: (this: IPlayerDocument, itemName: string) => Promise<void>;
   gainXP: (this: IPlayerDocument, amount: number) => void;
   saveWithRetries: (this: IPlayerDocument) => Promise<void>;
+  // IUnit
+  getAttackDamage: (this: IPlayerDocument) => number;
+  getName: (this: IPlayerDocument) => string;
+  attack: (this: IPlayerDocument, target: IUnit) => number;
+  startAttacking: (this: IPlayerDocument) => void;
+  stopAttacking: (this: IPlayerDocument) => void;
 }
 
-export interface IPlayerModel extends Model<IPlayerDocument>{
+export interface IPlayerModel extends Model<IPlayerDocument> {
   findPlayer: (
     this: IPlayerModel,
     { telegram_id, chat_id }: { telegram_id: number | undefined; chat_id: number | undefined }
