@@ -62,33 +62,39 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
   };
 
   endBattle = () => {
-    [...this.teamB, ...this.teamA].forEach((unit) => {
-      unit.stopAttacking();
-      unit.removeAllListeners();
-    });
-    if (this.updateTimer) {
-      clearInterval(this.updateTimer);
-      this.updateTimer = undefined;
-    }
+    logger.debug("Battle ends, cleaning up...");
+
+    this.cleanUp();
     this.battleLog.addRecord("Fight ends here, give away rewards");
+    this.handleUpdate();
+  };
+
+  startPreFight = () => {
+    this.teamB.forEach((unit) => {
+      (unit as INPCUnit).startAttackingPreFight();
+    });
+  };
+
+  stopPreFight = () => {
+    this.teamB.forEach((unit) => {
+      (unit as INPCUnit).stopAttacking();
+    });
   };
 
   startFight = () => {
     this.removeListener(BattleEvents.PLAYER_JOINED, this.startFight);
-    const isPreFight = this.teamA.length === 0;
+    this.stopPreFight();
+
     this.teamB.forEach((unit) => {
-      if (isPreFight) {
-        (unit as INPCUnit).startAttackingPreFight();
-        logger.debug("Starting pre fight");
-      } else {
-        unit.startAttacking();
-        logger.debug("Starting fight");
-      }
+      logger.debug("Starting fight");
+
+      unit.startAttacking();
     });
   };
 
   handleAttack = async (unit: IUnit) => {
     logger.debug("Handling attack by " + unit.getName());
+
     const isUnitTeamA = this.teamA.includes(unit);
     let target: IUnit;
 
@@ -106,14 +112,14 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
     this.battleLog.attacked(unit, target, dmgDealt);
 
     if (!target.isAlive()) {
-      if (isUnitTeamA) {
-        this.teamB.splice(this.teamB.indexOf(target), 1);
-      } else {
-        this.teamA.splice(this.teamA.indexOf(target), 1);
-      }
+      // if (isUnitTeamA) {
+      //   this.teamB.splice(this.teamB.indexOf(target), 1);
+      // } else {
+      //   this.teamA.splice(this.teamA.indexOf(target), 1);
+      // }
       this.battleLog.killed(unit, target);
 
-      target.stopAttacking();
+      this.cleanUpUnit(target);
     }
 
     if (!this.isPreFight && (this.teamA.length === 0 || this.teamB.length === 0)) {
@@ -242,5 +248,20 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
       battleInfoText += `${unit.getShortStats()}\n`;
     });
     return battleInfoText;
+  };
+
+  cleanUpUnit = (unit: IUnit) => {
+    unit.stopAttacking();
+    unit.removeAllListeners();
+  };
+
+  cleanUp = () => {
+    [...this.teamB, ...this.teamA].forEach((unit) => {
+      this.cleanUpUnit(unit);
+    });
+    if (this.updateTimer) {
+      clearInterval(this.updateTimer);
+      this.updateTimer = undefined;
+    }
   };
 }
