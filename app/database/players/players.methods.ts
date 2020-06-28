@@ -285,6 +285,15 @@ export function getAttackDamage(this: IPlayerDocument): number {
   return this.getHitDamage();
 }
 
+export function getArmor(this: IPlayerDocument): number {
+  const armorEquipped = this.getEquipedArmor();
+  let armor = 0;
+  if (armorEquipped) {
+    armor = armorEquipped.armor;
+  }
+  return armor;
+}
+
 export function getAttackSpeed(this: IPlayerDocument): number {
   const equipedWeapon = this.getEquipedWeapon();
   if (equipedWeapon) {
@@ -338,10 +347,10 @@ export function getShortStats(this: IPlayerDocument, isDead: boolean = false): s
   if (isDead) {
     name = `☠️<del>${name}</del>`;
   }
-  const statsText = `${name} \- ${this.level} level
-  💚${this.health_points.toFixed(1)}\\${this.health_points_max.toFixed(
+  const statsText = `<b>${name}</b> \- ${this.level} level
+    💚${this.health_points.toFixed(1)}\\${this.health_points_max.toFixed(
     1
-  )} 🗡${this.getAttackDamage()}`;
+  )} 🗡${this.getAttackDamage()} 🛡${this.getArmor().toFixed(0)}`;
   return statsText;
 }
 

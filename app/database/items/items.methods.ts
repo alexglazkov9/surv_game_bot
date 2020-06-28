@@ -9,7 +9,7 @@ export function getItemStats(this: IItemDocument): string {
       statsString += `*${weapon.name}* - _$${weapon.price}_\n
                 🗡Dmg: *${weapon.damage}*
                 ⚙️Dur: *${weapon.durability}*
-                ⚡️Speed: *${weapon.attack_speed}*
+                ⚡️Speed: *Every ${(weapon.attack_speed / 1000).toFixed(1)} sec*
                 `;
       break;
     }

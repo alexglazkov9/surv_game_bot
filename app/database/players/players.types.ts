@@ -46,6 +46,7 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   saveWithRetries: (this: IPlayerDocument) => Promise<void>;
   // IUnit
   getAttackDamage: (this: IPlayerDocument) => number;
+  getArmor: (this: IPlayerDocument) => number;
   getName: (this: IPlayerDocument) => string;
   attack: (this: IPlayerDocument, target: IUnit) => number;
   startAttacking: (this: IPlayerDocument) => void;

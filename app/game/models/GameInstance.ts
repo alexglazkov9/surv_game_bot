@@ -32,7 +32,7 @@ export class GameInstance {
   };
 
   startSpawning = async () => {
-    const msecs = getRandomInt(1, 1) * 60 * 1000;
+    const msecs = getRandomInt(15, 45) * 60 * 1000;
     logger.verbose(`Start spawning in ${this.chatId} in ${msecs / 1000} seconds`);
     await sleep(msecs);
     this.spawnEnemy();

@@ -26,6 +26,8 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
   hpMax: number;
   hp: number;
   damage: number;
+  armor: number;
+  tier: number;
   messageId?: number;
   expOnDeath: number;
   moneyOnDeath: number;
@@ -50,6 +52,8 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
     exp_on_death = 1,
     money_on_death = 0,
     damage = 1,
+    armor = 0,
+    tier = 1,
     attack_rate_minutes = 1 / 6,
     item_drop_chance = [],
     attack_rate_fight = 1500,
@@ -62,6 +66,8 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
     exp_on_death: number;
     money_on_death: number;
     damage: number;
+    armor: number;
+    tier: number;
     attack_rate_minutes: number;
     item_drop_chance: any[];
     attack_rate_fight: number;
@@ -79,6 +85,8 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
     this.expOnDeath = exp_on_death;
     this.moneyOnDeath = money_on_death;
     this.damage = damage;
+    this.armor = armor;
+    this.tier = tier;
     this.attackSpeedPreFight = attack_rate_minutes * 60 * 1000;
     this.attackRateInFight = attack_rate_fight;
 
@@ -109,6 +117,8 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
       chat_id,
       hp: json.hp * (1 + 0.1 * level),
       level,
+      armor: json.armor,
+      tier: json.tier,
       exp_on_death: (level * json.hp + level * json.damage * 2) / 5,
       money_on_death: json.money_drop * (1 + 0.1 * level),
       damage: json.damage * (1 + 0.1 * level),
@@ -490,6 +500,10 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
   };
 
   takeDamage = (dmg: number) => {
+    dmg = dmg - this.armor;
+    if (dmg < 0) {
+      dmg = 0;
+    }
     this.hp -= dmg;
     if (this.hp < 0) {
       this.hp = 0;
@@ -502,12 +516,18 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
   };
 
   getShortStats = (isDead: boolean = false): string => {
+    let tier = "";
+    for (let i = 0; i < this.tier; i++) {
+      tier += "⭐️";
+    }
     let name = `${this.getName()}`;
     if (isDead) {
       name = `☠️<del>${name}</del>`;
     }
-    const statsText = `${name} \- ${this.level} level
-    💚${this.hp.toFixed(1)}\\${this.hpMax.toFixed(1)} 🗡${this.damage.toFixed(1)}`;
+    const statsText = `<b>${name}</b> \- ${this.level} level ${tier}
+    💚${this.hp.toFixed(1)}\\${this.hpMax.toFixed(1)} 🗡${this.damage.toFixed(
+      1
+    )} 🛡${this.armor.toFixed(0)}`;
     return statsText;
   };
 

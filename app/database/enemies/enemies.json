@@ -9,6 +9,8 @@
     "max_lvl": 15,
     "spawn_chance": 15,
     "money_drop": 2,
+    "armor": 0,
+    "tier": 1,
     "item_drop": [
       {
         "item_name": "Club T1",
@@ -46,6 +48,8 @@
     "max_lvl": 16,
     "spawn_chance": 15,
     "money_drop": 4,
+    "armor": 0,
+    "tier": 1,
     "item_drop": [
       {
         "item_name": "Club T1",
@@ -107,6 +111,8 @@
     "max_lvl": 18,
     "spawn_chance": 15,
     "money_drop": 6,
+    "armor": 0,
+    "tier": 1,
     "item_drop": [
       {
         "item_name": "Club T1",
@@ -196,6 +202,8 @@
     "max_lvl": 19,
     "spawn_chance": 10,
     "money_drop": 8,
+    "armor": 0,
+    "tier": 2,
     "item_drop": [
       {
         "item_name": "Knife T1",
@@ -293,6 +301,8 @@
     "max_lvl": 20,
     "spawn_chance": 10,
     "money_drop": 10,
+    "armor": 1,
+    "tier": 2,
     "item_drop": [
       {
         "item_name": "Spear T1",
@@ -350,6 +360,8 @@
     "max_lvl": 21,
     "spawn_chance": 10,
     "money_drop": 14,
+    "armor": 2,
+    "tier": 2,
     "item_drop": [
       {
         "item_name": "Club T2",
@@ -370,10 +382,6 @@
       {
         "item_name": "Leather armor T2",
         "chance": 10
-      },
-      {
-        "item_name": "Knife T2",
-        "chance": 4
       },
       {
         "item_name": "Wooden armor T2",
@@ -399,6 +407,8 @@
     "max_lvl": 22,
     "spawn_chance": 10,
     "money_drop": 16,
+    "armor": 1,
+    "tier": 2,
     "item_drop": [
       {
         "item_name": "Crossbow T1",
@@ -460,6 +470,8 @@
     "max_lvl": 23,
     "spawn_chance": 5,
     "money_drop": 20,
+    "armor": 1,
+    "tier": 3,
     "item_drop": [
       {
         "item_name": "Handgun T1",
@@ -546,9 +558,11 @@
     "attack_rate_minutes": 5,
     "attack_rate_fight": 12500,
     "min_lvl": 10,
-    "max_lvl": 1000,
+    "max_lvl": 100,
     "spawn_chance": 5,
     "money_drop": 30,
+    "armor": 2,
+    "tier": 3,
     "item_drop": [
       {
         "item_name": "Shotgun T1",
@@ -643,9 +657,11 @@
     "attack_rate_minutes": 5,
     "attack_rate_fight": 15000,
     "min_lvl": 11,
-    "max_lvl": 26,
+    "max_lvl": 100,
     "spawn_chance": 5,
     "money_drop": 30,
+    "armor": 0,
+    "tier": 3,
     "item_drop": [
       {
         "item_name": "SMG T1",

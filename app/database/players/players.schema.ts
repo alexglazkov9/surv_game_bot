@@ -39,6 +39,7 @@ import {
   getName,
   stopAttacking,
   getHpIndicator,
+  getArmor,
 } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
 
@@ -115,8 +116,9 @@ PlayerSchema.methods.getAttackSpeed = getAttackSpeed;
 PlayerSchema.methods.addItemToInventory = addItemToInventory;
 PlayerSchema.methods.gainXP = gainXP;
 PlayerSchema.methods.saveWithRetries = saveWithRetries;
-//IUnit
+// IUnit
 PlayerSchema.methods.getAttackDamage = getAttackDamage;
+PlayerSchema.methods.getArmor = getArmor;
 PlayerSchema.methods.getName = getName;
 PlayerSchema.methods.attack = attack;
 PlayerSchema.methods.startAttacking = startAttacking;
