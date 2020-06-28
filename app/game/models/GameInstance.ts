@@ -5,6 +5,8 @@ import { logger } from "../../utils/logger";
 
 import enemies = require("../../database/enemies/enemies.json");
 import { getRandomInt, sleep } from "../../utils/utils";
+import { NPCBattle } from "./battle/NPCBattle";
+import { BattleEvents } from "./battle/BattleEvents";
 
 const RESPAWN_RATE = 60 * 60 * 1000;
 const HP_REGEN_RATE = 60 * 60 * 1000;
@@ -30,26 +32,44 @@ export class GameInstance {
   };
 
   startSpawning = async () => {
-    const msecs = getRandomInt(15, 60) * 60 * 1000;
+    const msecs = getRandomInt(1, 1) * 60 * 1000;
     logger.verbose(`Start spawning in ${this.chatId} in ${msecs / 1000} seconds`);
     await sleep(msecs);
     this.spawnEnemy();
   };
 
-  spawnEnemy = async () => {
+  spawnEnemy = async (onlyOne: boolean = false) => {
+    logger.debug("in spawnEnemy");
+
     const enemy = await this.getRandomEnemy();
+    const enemy2 = await this.getRandomEnemy();
+
+    const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
+
+    if (!onlyOne) {
+      battle.addListener(BattleEvents.BATTLE_ENDED, this.startSpawning);
+    }
+
+    battle.addToNPCTeam(enemy);
+
+    // 30% chance to instantly start fighting someone
+    if (getRandomInt(0, 10) >= 7) {
+      const playerUnit = await PlayerModel.getRandomPlayer(this.chatId, true);
+      battle.addToPlayersTeam(playerUnit);
+    }
+
+    battle.startBattle();
     logger.verbose(`Spawning enemy [${enemy.name}] in ${this.chatId}`);
-    enemy.spawn();
-    enemy.addListener(ON_DEATH_EVENT, this.startSpawning);
   };
 
   getRandomEnemy = async (): Promise<Enemy> => {
     const enemyLevel = (await PlayerModel.getRandomMinMaxLvl(this.chatId)) ?? 1;
-
+    logger.debug(enemyLevel);
     // Randomly picks enemy type to spawn, repicks if lvl requirements are out of bounds
     let enemyType;
     do {
       enemyType = this.getRandomEnemyType();
+      // logger.debug(enemyType);
     } while (enemies[enemyType].min_lvl > enemyLevel || enemies[enemyType].max_lvl < enemyLevel);
 
     return Enemy.fromJson({

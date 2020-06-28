@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger";
 import { PlayerModel } from "../../database/players/players.model";
 import { Shop } from "./Shop";
 import { Inventory } from "./Inventory";
+import { sleep } from "../../utils/utils";
 
 export class GameManager {
   private gameInstances: { [id: number]: GameInstance };
@@ -48,11 +49,12 @@ export class GameManager {
   };
 
   spawnEnemy = async (msg: TelegramBot.Message) => {
+    logger.debug("Spawn enemy called explicitly");
     if (msg.chat.id !== -1001163373375 && msg.chat.id !== -1001429535244) {
       this.bot.sendMessage(msg.chat.id, "No cheating here, fag");
       return;
     }
-    this.gameInstances[msg.chat.id].spawnEnemy();
+    this.gameInstances[msg.chat.id]?.spawnEnemy(true);
   };
 
   respawn = async (msg: TelegramBot.Message) => {

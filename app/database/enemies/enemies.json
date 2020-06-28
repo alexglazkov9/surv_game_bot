@@ -372,6 +372,10 @@
         "chance": 10
       },
       {
+        "item_name": "Knife T2",
+        "chance": 4
+      },
+      {
         "item_name": "Wooden armor T2",
         "chance": 5
       },
@@ -542,7 +546,7 @@
     "attack_rate_minutes": 5,
     "attack_rate_fight": 12500,
     "min_lvl": 10,
-    "max_lvl": 25,
+    "max_lvl": 1000,
     "spawn_chance": 5,
     "money_drop": 30,
     "item_drop": [

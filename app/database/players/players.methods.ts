@@ -7,6 +7,8 @@ import { CallbackActions } from "../../game/misc/CallbackConstants";
 import { logger } from "../../utils/logger";
 import { Enemy } from "../../game/models/Enemy";
 import { CallbackData } from "../../game/models/CallbackData";
+import { IUnit } from "../../game/models/units/IUnit";
+import { BattleEvents } from "../../game/models/battle/BattleEvents";
 
 const DEFAULT_ATTACK_SPEED = 5000;
 
@@ -27,7 +29,7 @@ export function getPlayerStats(this: IPlayerDocument): string {
   return statsString;
 }
 
-export function getShortStats(this: IPlayerDocument): string {
+export function getMinStats(this: IPlayerDocument): string {
   const statsString = `(💚${this.health_points.toFixed(1)})`;
   return statsString;
 }
@@ -130,7 +132,7 @@ export async function levelUp(this: IPlayerDocument, save: boolean = false): Pro
   }
 }
 
-export async function takeDamage(this: IPlayerDocument, dmg: number): Promise<number> {
+export function takeDamage(this: IPlayerDocument, dmg: number): number {
   // Armor damage reduction
   if (this.equiped_armor != null) {
     this.inventory.find((item, index) => {
@@ -153,7 +155,7 @@ export async function takeDamage(this: IPlayerDocument, dmg: number): Promise<nu
 
   this.health_points -= dmg;
 
-  await this.recalculateAndSave();
+  this.recalculateAndSave();
 
   return dmg;
 }
@@ -172,7 +174,7 @@ export function getHitDamage(this: IPlayerDocument): number {
 }
 
 export async function hitEnemy(this: IPlayerDocument, enemy: Enemy): Promise<void> {
-  enemy.takeDamage(this);
+  enemy.takeIncomingDamage(this);
 
   if (this.equiped_weapon != null) {
     this.inventory.forEach((item, index) => {
@@ -228,15 +230,6 @@ export function canAttack(this: IPlayerDocument, callbackQueryId: string | null 
   );
 }
 
-export function getAttackSpeed(this: IPlayerDocument): number {
-  const equipedWeapon = this.getEquipedWeapon();
-  if (equipedWeapon) {
-    return equipedWeapon.attack_speed;
-  } else {
-    return DEFAULT_ATTACK_SPEED;
-  }
-}
-
 export function isAlive(this: IPlayerDocument): boolean {
   return this.health_points > 0;
 }
@@ -285,4 +278,74 @@ export function getEquipedArmor(this: IPlayerDocument): IArmor | null {
     return armor as IArmor;
   }
   return null;
+}
+
+// IUnit methods
+export function getAttackDamage(this: IPlayerDocument): number {
+  return this.getHitDamage();
+}
+
+export function getAttackSpeed(this: IPlayerDocument): number {
+  const equipedWeapon = this.getEquipedWeapon();
+  if (equipedWeapon) {
+    return equipedWeapon.attack_speed;
+  } else {
+    return DEFAULT_ATTACK_SPEED;
+  }
+}
+
+export function getName(this: IPlayerDocument): string {
+  return this.name;
+}
+
+export function attack(this: IPlayerDocument, target: IUnit): number {
+  const dmgDealt = target.takeDamage(this.getAttackDamage());
+  if (this.equiped_weapon != null) {
+    this.inventory.forEach((item, index) => {
+      if (item._id.toString() === this.equiped_weapon?._id.toString()) {
+        (item as IWeapon).durability--;
+        // this.action_points -= (item as IWeapon).ap_cost;
+        if ((item as IWeapon).durability <= 0) {
+          this.inventory.splice(index, 1);
+          this.equiped_weapon = null;
+        }
+      }
+    });
+  } else {
+    // this.action_points--;
+  }
+
+  this.recalculateAndSave();
+  return dmgDealt;
+}
+
+export function startAttacking(this: IPlayerDocument) {
+  if (this.attackTimer !== undefined) {
+    this.stopAttacking();
+  }
+  this.attackTimer = setInterval(() => this.emit(BattleEvents.UNIT_ATTACKS), this.getAttackSpeed());
+}
+
+export function stopAttacking(this: IPlayerDocument) {
+  if (this.attackTimer !== undefined) {
+    clearInterval(this.attackTimer);
+    this.attackTimer = undefined;
+  }
+}
+
+export function getShortStats(this: IPlayerDocument, isDead: boolean = false): string {
+  let name = `${this.getName()}`;
+  if (isDead) {
+    name = `☠️<del>${name}</del>`;
+  }
+  const statsText = `${name} \- ${this.level} level
+  💚${this.health_points.toFixed(1)}\\${this.health_points_max.toFixed(
+    1
+  )} 🗡${this.getAttackDamage()}`;
+  return statsText;
+}
+
+export function getHpIndicator(this: IPlayerDocument): string {
+  const hpIndicator = `💚${this.health_points.toFixed(1)}`;
+  return hpIndicator;
 }
