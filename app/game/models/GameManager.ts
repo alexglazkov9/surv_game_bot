@@ -44,6 +44,8 @@ export class GameManager {
     this.bot.onText(/\/spawn_enemy/, this.spawnEnemy);
 
     this.bot.onText(/\/respawn/, this.respawn);
+
+    this.bot.onText(/\/help/, this.help);
   };
 
   spawnEnemy = async (msg: TelegramBot.Message) => {
@@ -201,5 +203,18 @@ export class GameManager {
         this.bot.sendMessage(msg.chat.id, "Something went wrong", opts);
       }
     }
+  };
+
+  help = async (msg: TelegramBot.Message) => {
+    const message = `Available commands:
+      \n/reg <username> - register a username to start playing
+      \n/character - information about your character
+      \n/character <username> - information about another character
+      \n/inventory - check, equip and unequip items
+      \n/shop - buy armor and weapons`;
+
+    this.bot.sendMessage(msg.chat.id, message, {
+      disable_notification: true,
+    });
   };
 }
