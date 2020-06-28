@@ -228,7 +228,7 @@
         "chance": 8
       },
       {
-        "item_name": "knife T2",
+        "item_name": "Knife T2",
         "chance": 4
       },
       {
@@ -362,7 +362,7 @@
     "attack_rate_minutes": 5,
     "attack_rate_fight": 12500,
     "min_lvl": 10,
-    "max_lvl": 25,
+    "max_lvl": 1000,
     "spawn_chance": 5,
     "money_drop": 15,
     "item_drop": [

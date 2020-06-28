@@ -24,7 +24,7 @@ export interface IPlayer {
 export interface IPlayerDocument extends IPlayer, Document, IUnit {
   getPlayerStats: (this: IPlayerDocument) => string;
   getMinStats: (this: IPlayerDocument) => string;
-  getShortStats: (this: IPlayerDocument) => string;
+  getShortStats: (this: IPlayerDocument, isDead?: boolean) => string;
   recalculateAndSave: (this: IPlayerDocument) => Promise<void>;
   getExpCap: (this: IPlayerDocument) => number;
   getHitDamage: (this: IPlayerDocument) => number;

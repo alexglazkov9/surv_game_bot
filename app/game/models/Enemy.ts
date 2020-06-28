@@ -501,8 +501,12 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
     return this.hp > 0;
   };
 
-  getShortStats = (): string => {
-    const statsText = `${this.getName()} \- ${this.level} level
+  getShortStats = (isDead: boolean = false): string => {
+    let name = `${this.getName()}`;
+    if (isDead) {
+      name = `☠️<del>${name}</del>`;
+    }
+    const statsText = `${name} \- ${this.level} level
     💚${this.hp.toFixed(1)}\\${this.hpMax.toFixed(1)} 🗡${this.damage.toFixed(1)}`;
     return statsText;
   };

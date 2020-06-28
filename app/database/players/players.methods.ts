@@ -333,8 +333,12 @@ export function stopAttacking(this: IPlayerDocument) {
   }
 }
 
-export function getShortStats(this: IPlayerDocument): string {
-  const statsText = `${this.name} \- ${this.level} level
+export function getShortStats(this: IPlayerDocument, isDead: boolean = false): string {
+  let name = `${this.getName()}`;
+  if (isDead) {
+    name = `☠️<del>${name}</del>`;
+  }
+  const statsText = `${name} \- ${this.level} level
   💚${this.health_points.toFixed(1)}\\${this.health_points_max.toFixed(
     1
   )} 🗡${this.getAttackDamage()}`;
