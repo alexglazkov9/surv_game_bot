@@ -39,8 +39,11 @@ export class GameInstance {
 
   spawnEnemy = async () => {
     const enemy = await this.getRandomEnemy();
+    const enemy2 = await this.getRandomEnemy();
     const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
     battle.addToNPCTeam(enemy);
+    battle.addToNPCTeam(enemy2);
+
     battle.startBattle();
     logger.verbose(`Spawning enemy [${enemy.name}] in ${this.chatId}`);
     //enemy.spawn();

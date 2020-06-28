@@ -5,6 +5,7 @@ import { logger } from "../../utils/logger";
 import { PlayerModel } from "../../database/players/players.model";
 import { Shop } from "./Shop";
 import { Inventory } from "./Inventory";
+import { sleep } from "../../utils/utils";
 
 export class GameManager {
   private gameInstances: { [id: number]: GameInstance };

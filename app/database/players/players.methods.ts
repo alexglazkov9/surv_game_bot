@@ -132,7 +132,7 @@ export async function levelUp(this: IPlayerDocument, save: boolean = false): Pro
   }
 }
 
-export async function takeDamage(this: IPlayerDocument, dmg: number): Promise<number> {
+export function takeDamage(this: IPlayerDocument, dmg: number): number {
   // Armor damage reduction
   if (this.equiped_armor != null) {
     this.inventory.find((item, index) => {
@@ -155,7 +155,7 @@ export async function takeDamage(this: IPlayerDocument, dmg: number): Promise<nu
 
   this.health_points -= dmg;
 
-  await this.recalculateAndSave();
+  this.recalculateAndSave();
 
   return dmg;
 }
@@ -299,8 +299,7 @@ export function getName(this: IPlayerDocument): string {
 }
 
 export function attack(this: IPlayerDocument, target: IUnit): number {
-  const dmgDealt = this.getAttackDamage();
-  target.takeDamage(dmgDealt);
+  const dmgDealt = target.takeDamage(this.getAttackDamage());
   if (this.equiped_weapon != null) {
     this.inventory.forEach((item, index) => {
       if (item._id.toString() === this.equiped_weapon?._id.toString()) {
@@ -335,8 +334,14 @@ export function stopAttacking(this: IPlayerDocument) {
 }
 
 export function getShortStats(this: IPlayerDocument): string {
-  const statsText = `${this.name} - ${this.level} - 💚${this.health_points.toFixed(
+  const statsText = `${this.name} \- ${this.level} level
+  💚${this.health_points.toFixed(1)}\\${this.health_points_max.toFixed(
     1
-  )}\\${this.health_points_max.toFixed(1)} 🗡${this.getAttackDamage()}`;
+  )} 🗡${this.getAttackDamage()}`;
   return statsText;
+}
+
+export function getHpIndicator(this: IPlayerDocument): string {
+  const hpIndicator = `💚${this.health_points.toFixed(1)}`;
+  return hpIndicator;
 }

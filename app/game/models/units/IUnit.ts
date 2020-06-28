@@ -7,9 +7,10 @@ export interface IUnit extends EventEmitter.EventEmitter {
   getAttackSpeed(): number;
   getName(): string;
   attack(target: IUnit): number;
-  takeDamage(dmg: number): void;
+  takeDamage(dmg: number): number;
   startAttacking(): void;
   stopAttacking(): void;
   isAlive(): boolean;
   getShortStats(): string;
+  getHpIndicator(): string;
 }

@@ -38,6 +38,7 @@ import {
   getShortStats,
   getName,
   stopAttacking,
+  getHpIndicator,
 } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
 
@@ -120,5 +121,6 @@ PlayerSchema.methods.getName = getName;
 PlayerSchema.methods.attack = attack;
 PlayerSchema.methods.startAttacking = startAttacking;
 PlayerSchema.methods.stopAttacking = stopAttacking;
+PlayerSchema.methods.getHpIndicator = getHpIndicator;
 
 export default PlayerSchema;

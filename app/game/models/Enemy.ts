@@ -473,8 +473,8 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
   };
 
   attack = (target: IUnit): number => {
-    target.takeDamage(this.getAttackDamage());
-    return this.getAttackDamage();
+    const dmgDealt = target.takeDamage(this.getAttackDamage());
+    return dmgDealt;
   };
 
   getAttackDamage = (): number => {
@@ -494,6 +494,7 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
     if (this.hp < 0) {
       this.hp = 0;
     }
+    return dmg;
   };
 
   isAlive = (): boolean => {
@@ -501,9 +502,13 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
   };
 
   getShortStats = (): string => {
-    const statsText = `${this.name} - ${this.level} - 💚${this.hp.toFixed(1)}\\${this.hpMax.toFixed(
-      1
-    )} 🗡${this.damage.toFixed(1)}`;
+    const statsText = `${this.getName()} \- ${this.level} level
+    💚${this.hp.toFixed(1)}\\${this.hpMax.toFixed(1)} 🗡${this.damage.toFixed(1)}`;
     return statsText;
+  };
+
+  getHpIndicator = (): string => {
+    const hpIndicator = `💚${this.hp.toFixed(1)}`;
+    return hpIndicator;
   };
 }

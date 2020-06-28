@@ -28,7 +28,7 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   recalculateAndSave: (this: IPlayerDocument) => Promise<void>;
   getExpCap: (this: IPlayerDocument) => number;
   getHitDamage: (this: IPlayerDocument) => number;
-  takeDamage: (this: IPlayerDocument, dmg: number) => Promise<number>;
+  takeDamage: (this: IPlayerDocument, dmg: number) => number;
   canAttack: (this: IPlayerDocument, callbackQueryId?: string) => boolean;
   isAlive: (this: IPlayerDocument) => boolean;
   revive: (this: IPlayerDocument) => Promise<void>;
@@ -50,6 +50,7 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   attack: (this: IPlayerDocument, target: IUnit) => number;
   startAttacking: (this: IPlayerDocument) => void;
   stopAttacking: (this: IPlayerDocument) => void;
+  getHpIndicator: (this: IPlayerDocument) => string;
 }
 
 export interface IPlayerModel extends Model<IPlayerDocument> {

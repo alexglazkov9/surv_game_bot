@@ -5,7 +5,7 @@ import EventEmitter = require("events");
 import { BattleEvents } from "./BattleEvents";
 import { PlayerModel } from "../../../database/players/players.model";
 import { INPCUnit } from "../units/INPCUnit";
-import { getRandomInt } from "../../../utils/utils";
+import { getRandomInt, sleep } from "../../../utils/utils";
 import { logger } from "../../../utils/logger";
 import { CallbackActions } from "../../misc/CallbackConstants";
 import { CallbackData } from "../CallbackData";
@@ -25,6 +25,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
   updateTimer?: NodeJS.Timeout;
   message?: TelegramBot.Message;
   previousMessageText?: string;
+  playersInChat: IPlayerDocument[];
 
   constructor({ chatId, bot }: { chatId: number; bot: TelegramBot }) {
     super();
@@ -35,6 +36,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
     this.teamA = [];
     this.teamB = [];
     this.battleLog = new BattleLog();
+    this.playersInChat = [];
 
     this.addListener(BattleEvents.PLAYER_JOINED, this.startFight);
     this.addListener(BattleEvents.UPDATE_MESSAGE, this.handleUpdate);
@@ -56,7 +58,8 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
     unit.addListener(BattleEvents.UNIT_ATTACKS, () => this.handleAttack(unit));
   };
 
-  startBattle = () => {
+  startBattle = async () => {
+    this.playersInChat = await PlayerModel.getAllFromChat(this.chatId);
     this.sendBattleMessage();
     this.startFight();
   };
@@ -70,8 +73,9 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
   };
 
   startPreFight = () => {
-    this.teamB.forEach((unit) => {
+    this.teamB.forEach(async (unit) => {
       (unit as INPCUnit).startAttackingPreFight();
+      await sleep(100);
     });
   };
 
@@ -97,32 +101,39 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
 
     const isUnitTeamA = this.teamA.includes(unit);
     let target: IUnit;
-
-    if (isUnitTeamA) {
-      target = this.teamB[getRandomInt(0, this.teamA.length)];
-    } else {
-      if (this.isPreFight) {
-        target = await PlayerModel.getRandomPlayer(this.chatId, true);
+    do {
+      if (isUnitTeamA) {
+        target = this.teamB[getRandomInt(0, this.teamB.length)];
       } else {
-        target = this.teamA[getRandomInt(0, this.teamA.length)];
+        if (this.isPreFight) {
+          //target = await PlayerModel.getRandomPlayer(this.chatId, true);
+          target = this.playersInChat[getRandomInt(0, this.playersInChat.length)];
+          logger.debug(this.playersInChat);
+        } else {
+          target = this.teamA[getRandomInt(0, this.teamA.length)];
+        }
+      }
+    } while (target !== null && !target.isAlive());
+
+    if (target.isAlive()) {
+      const dmgDealt = unit.attack(target);
+      this.battleLog.attacked(unit, target, dmgDealt, isUnitTeamA ? "🔹" : "🔸");
+      if (!target.isAlive()) {
+        logger.debug(`${target.getName()} died`);
+
+        this.battleLog.killed(unit, target);
+
+        this.cleanUpUnit(target);
+
+        if (this.isPreFight) {
+          this.endBattle();
+        }
       }
     }
 
-    const dmgDealt = unit.attack(target);
-    this.battleLog.attacked(unit, target, dmgDealt);
+    if (!this.isPreFight && !(this.isAnyoneAlive(this.teamA) && this.isAnyoneAlive(this.teamB))) {
+      logger.debug(`No one is alive in one of the teams, ending the battle`);
 
-    if (!target.isAlive()) {
-      // if (isUnitTeamA) {
-      //   this.teamB.splice(this.teamB.indexOf(target), 1);
-      // } else {
-      //   this.teamA.splice(this.teamA.indexOf(target), 1);
-      // }
-      this.battleLog.killed(unit, target);
-
-      this.cleanUpUnit(target);
-    }
-
-    if (!this.isPreFight && (this.teamA.length === 0 || this.teamB.length === 0)) {
       this.endBattle();
     }
   };
@@ -135,7 +146,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
     });
 
     const opts: TelegramBot.SendMessageOptions = {
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
           [
@@ -148,6 +159,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
       },
     };
 
+    logger.debug(this.getBattleInfo());
     this.message = await this.bot.sendMessage(this.chatId, this.getBattleInfo(), opts);
 
     this.bot.on("callback_query", this.onJoinCallbackQuery);
@@ -210,7 +222,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
       });
 
       const opts: TelegramBot.EditMessageTextOptions = {
-        parse_mode: "Markdown",
+        parse_mode: "HTML",
         chat_id: this.chatId,
         message_id: this.message.message_id,
         reply_markup: {
@@ -239,13 +251,18 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
   };
 
   getBattleInfo = (): string => {
-    let battleInfoText = `BATTLE\n`;
+    let battleInfoText = `<pre>     </pre><b>🔰BATTLE🔰</b>\n\n`;
+    battleInfoText += `Side 🟠\n`;
     this.teamB.forEach((unit) => {
-      battleInfoText += `${unit.getShortStats()}\n`;
+      battleInfoText += `▹ ${unit.getShortStats()}\n`;
     });
-    battleInfoText += "*VS*\n";
+    battleInfoText += `➰〰️〰️<b>❖VERSUS❖</b>〰️〰️➰\n`;
+    battleInfoText += `Side 🔵\n`;
+    if (this.teamA.length === 0) {
+      battleInfoText += `&lt;-nobody-&gt;`;
+    }
     this.teamA.forEach((unit) => {
-      battleInfoText += `${unit.getShortStats()}\n`;
+      battleInfoText += `▹ ${unit.getShortStats()}\n`;
     });
     return battleInfoText;
   };
@@ -257,11 +274,17 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
 
   cleanUp = () => {
     [...this.teamB, ...this.teamA].forEach((unit) => {
+      logger.debug("Cleaning up " + unit.getName());
       this.cleanUpUnit(unit);
     });
     if (this.updateTimer) {
       clearInterval(this.updateTimer);
       this.updateTimer = undefined;
     }
+  };
+
+  isAnyoneAlive = (units: IUnit[]): boolean => {
+    logger.debug(`${units.some((unit) => unit.isAlive())} is anyone alive`);
+    return units.some((unit) => unit.isAlive());
   };
 }
