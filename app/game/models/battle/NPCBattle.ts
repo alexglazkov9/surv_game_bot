@@ -168,7 +168,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
   onJoinCallbackQuery = async (callbackQuery: TelegramBot.CallbackQuery) => {
     const callbackData = CallbackData.fromJson(callbackQuery.data);
 
-    if (callbackData.action === CallbackActions.JOIN_FIGHT) {
+    if (callbackData.payload === this.id && callbackData.action === CallbackActions.JOIN_FIGHT) {
       const player = await PlayerModel.findPlayer({
         telegram_id: callbackQuery.from.id,
         chat_id: this.chatId,
