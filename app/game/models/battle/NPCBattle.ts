@@ -169,7 +169,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
     const callbackData = CallbackData.fromJson(callbackQuery.data);
 
     if (callbackData.action === CallbackActions.JOIN_FIGHT) {
-      const player = await await PlayerModel.findPlayer({
+      const player = await PlayerModel.findPlayer({
         telegram_id: callbackQuery.from.id,
         chat_id: this.chatId,
       });
@@ -177,7 +177,10 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
       if (player !== undefined) {
         if (
           this.teamA.findIndex((unit) => {
-            return (unit as IPlayerDocument).telegram_id === player?.telegram_id;
+            return (
+              (unit as IPlayerDocument).telegram_id === player?.telegram_id &&
+              (unit as IPlayerDocument).chat_id === player.chat_id
+            );
           }) !== -1
         ) {
           const optsCall: TelegramBot.AnswerCallbackQueryOptions = {
@@ -283,6 +286,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
   };
 
   cleanUp = () => {
+    this.bot.removeListener("callback_query", this.onJoinCallbackQuery);
     [...this.teamB, ...this.teamA].forEach((unit) => {
       logger.debug("Cleaning up " + unit.getName());
       this.cleanUpUnit(unit);

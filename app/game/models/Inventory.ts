@@ -287,7 +287,7 @@ export class Inventory {
   };
 
   getHeaderText = (): string => {
-    let section = INVENTORY_SECTIONS[this.sectionSelectedIndex];
+    const section = INVENTORY_SECTIONS[this.sectionSelectedIndex];
     let text = `<pre>    </pre>▶️<b>${section.toUpperCase()}</b>◀️\n\n`;
     text += `${this.player?.getShortStats()}\n`;
     return text;
