@@ -3,19 +3,22 @@ import {
   IItemDocument,
   IWeapon,
   IArmor,
-  IItem,
-  IWeaponDocument,
+  IConsumable,
+  IConsumableDocument,
 } from "../../database/items/items.types";
 import { IPlayerDocument } from "../../database/players/players.types";
-import { db, bot } from "../../app";
+import { bot } from "../../app";
 import { logger } from "../../utils/logger";
 import { CallbackActions } from "../misc/CallbackConstants";
 import { CallbackData } from "./CallbackData";
 import { ItemType } from "../../database/items/ItemType";
+import { PlayerModel } from "../../database/players/players.model";
 
 // Number of columns in the inventory
 const COL_NUM = 2;
-const INVENTORY_SECTIONS = [ItemType.ARMOR, ItemType.WEAPON];
+const INVENTORY_SECTIONS = [ItemType.ARMOR, ItemType.WEAPON, ItemType.CONSUMABLE];
+const USE_BTN_TXT = "USE";
+const EQUIP_BTN_TXT = "EQUIP";
 
 export class Inventory {
   chatId: number;
@@ -46,7 +49,7 @@ export class Inventory {
   pullPlayer = async () => {
     // Pull all items to be displayed in the shop
     try {
-      this.player = await db?.PlayerModel.findPlayer({
+      this.player = await PlayerModel.findPlayer({
         telegram_id: this.fromId,
         chat_id: this.chatId,
       });
@@ -83,6 +86,7 @@ export class Inventory {
       const itemsFiltered = this.player.inventory.filter(
         (item) => item.__t === INVENTORY_SECTIONS[this.sectionSelectedIndex]
       );
+
       let index = 0;
       let row = 0;
 
@@ -96,7 +100,7 @@ export class Inventory {
 
             const item = itemsFiltered[index];
             let equipedItem;
-            let btnTxt: string = "";
+            let btnTxt: string = item.name;
 
             // Mark equipped items
             if (INVENTORY_SECTIONS[this.sectionSelectedIndex] === ItemType.WEAPON) {
@@ -109,7 +113,10 @@ export class Inventory {
               btnTxt = `${equipedItem?._id.toString() === item._id.toString() ? "🟢" : ""} ${
                 item.name
               } (${(item as IArmor).durability})`;
+            } else if (INVENTORY_SECTIONS[this.sectionSelectedIndex] === ItemType.CONSUMABLE) {
+              btnTxt = `${item.name} (${(item as IConsumable).charges})`;
             }
+
             const cbData = new CallbackData({
               action: CallbackActions.INVENTORY,
               telegram_id: this.fromId,
@@ -185,12 +192,60 @@ export class Inventory {
       return;
     }
 
+    const selectedSection = INVENTORY_SECTIONS[this.sectionSelectedIndex];
     let itemStats: string = "";
     switch (data.action) {
       // Player clicked on any item
       case CallbackActions.INVENTORY: {
+        let inlineKeyboardUseBtn: TelegramBot.InlineKeyboardButton[] = [];
+
         const itemId = data.payload;
-        switch (INVENTORY_SECTIONS[this.sectionSelectedIndex]) {
+
+        const callbackData = new CallbackData({
+          action: CallbackActions.INVENTORY_USE,
+          telegram_id: this.fromId,
+          payload: itemId,
+        });
+
+        const useBtnData = callbackData.toJson();
+        inlineKeyboardUseBtn = [
+          {
+            text: selectedSection === ItemType.CONSUMABLE ? USE_BTN_TXT : EQUIP_BTN_TXT,
+            callback_data: useBtnData,
+          },
+        ];
+
+        if (this.player) {
+          this.player.inventory.forEach(async (item) => {
+            if (item._id.toString() === itemId) {
+              itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
+            }
+          });
+        }
+
+        const opts: TelegramBot.EditMessageTextOptions = {
+          message_id: this.inventoryMessage?.message_id,
+          chat_id: this.chatId,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [inlineKeyboardUseBtn, ...this.generateLayout()],
+          },
+        };
+
+        const msgTxt = this.getHeaderText() + `\n${itemStats}`;
+        if (msgTxt !== this.previousMsgText || opts !== this.previousOpts) {
+          this.previousMsgText = msgTxt;
+          this.previousOpts = opts;
+          bot.editMessageText(msgTxt, opts);
+        }
+
+        break;
+      }
+      // Player clicked USE/EQUIP
+      case CallbackActions.INVENTORY_USE: {
+        const itemId = data.payload;
+
+        switch (selectedSection) {
           case ItemType.WEAPON: {
             if (this.player) {
               this.player.inventory.forEach(async (item) => {
@@ -220,6 +275,26 @@ export class Inventory {
                   await this.player?.saveWithRetries();
                 }
               });
+            }
+            break;
+          }
+          case ItemType.CONSUMABLE: {
+            if (this.player?.isAlive()) {
+              this.player.inventory.forEach(async (item) => {
+                if (item._id.toString() === itemId) {
+                  itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
+                  if (this.player) {
+                    (item as IConsumableDocument).onConsume(this.player);
+                  }
+                }
+              });
+            } else {
+              const optsCall = {
+                callback_query_id: callbackQuery.id,
+                text: "You are DEAD",
+                show_alert: false,
+              };
+              bot.answerCallbackQuery(optsCall);
             }
             break;
           }

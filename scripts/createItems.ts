@@ -1,12 +1,9 @@
-// import { ItemModel } from "../items/items.model";
 import { connect, disconnect } from "../app/database/database";
-// import { WeaponModel, ArmorModel } from "../app/database/items/items.model";
-// import { logger } from "../app/utils/logger";
-//import { db } from "../app";
+import { WeaponModel, ArmorModel, ConsumableModel } from "../app/database/items/items.model";
+import { ConsumableEffects } from "../app/database/items/ConsumableEffects";
 
 (async () => {
-  // logger.debug("jere");
-  //connect();
+  connect();
 
   const weapons = [
     { name: "Club T1", damage: 2, ap_cost: 1, durability: 5, price: 5, attack_speed: 5000 },
@@ -137,14 +134,41 @@ import { connect, disconnect } from "../app/database/database";
     { name: "Heavy armor T3", armor: 20, durability: 50, price: 500 },
   ];
 
+  const consumables = [
+    {
+      name: "Flask",
+      charges: 1,
+      onComsumeEffects: [{ effect: ConsumableEffects.RESTORE_HP, value: 10 }],
+      price: 7,
+    },
+    {
+      name: "Apple Pie",
+      charges: 1,
+      onComsumeEffects: [{ effect: ConsumableEffects.RESTORE_HP, value: 15 }],
+      price: 10,
+    },
+    {
+      name: "Apple Juice",
+      charges: 1,
+      onComsumeEffects: [{ effect: ConsumableEffects.RESTORE_HP_PERCENT, value: 50 }],
+      price: 15,
+    },
+    {
+      name: "Lemonade",
+      charges: 1,
+      onComsumeEffects: [{ effect: ConsumableEffects.RESTORE_HP_PERCENT, value: 25 }],
+      price: 12.5,
+    },
+  ];
+
   try {
     for (const weapon of weapons) {
       try {
-        // await WeaponModel.findOneAndUpdate({ name: weapon.name }, weapon, {
-        //   upsert: true,
-        //   new: true,
-        //   setDefaultsOnInsert: true,
-        // });
+        await WeaponModel.findOneAndUpdate({ name: weapon.name }, weapon, {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        });
         console.log(`Created weapon ${weapon.name}`);
       } catch (e) {
         console.log(e);
@@ -152,21 +176,33 @@ import { connect, disconnect } from "../app/database/database";
     }
     for (const armor of armors) {
       try {
-        // await ArmorModel.findOneAndUpdate({ name: armor.name }, armor, {
-        //   upsert: true,
-        //   new: true,
-        //   setDefaultsOnInsert: true,
-        // });
+        await ArmorModel.findOneAndUpdate({ name: armor.name }, armor, {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        });
         console.log(`Created armor ${armor.name}`);
       } catch (e) {
         console.log(e);
       }
     }
+    for (const consumable of consumables) {
+      try {
+        const doc = await ConsumableModel.findOneAndUpdate({ name: consumable.name }, consumable, {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        });
+        doc.onConsumeEffects = consumable.onComsumeEffects;
+        await doc.save();
+        console.log(`Created consumable ${consumable.name}`);
+      } catch (e) {
+        console.log(e);
+      }
+    }
 
-    // disconnect();
+    disconnect();
   } catch (e) {
     console.error(e);
   }
-
-  //disconnect();
 })();

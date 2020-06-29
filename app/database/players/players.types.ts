@@ -43,6 +43,7 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   getAttackSpeed: (this: IPlayerDocument) => number;
   addItemToInventory: (this: IPlayerDocument, itemName: string) => Promise<void>;
   gainXP: (this: IPlayerDocument, amount: number) => void;
+  gainHP: (this: IPlayerDocument, amount: number, opts?: { isPercentage?: boolean }) => void;
   saveWithRetries: (this: IPlayerDocument) => Promise<void>;
   // IUnit
   getAttackDamage: (this: IPlayerDocument) => number;

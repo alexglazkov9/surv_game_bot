@@ -40,6 +40,7 @@ import {
   stopAttacking,
   getHpIndicator,
   getArmor,
+  gainHP,
 } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
 
@@ -115,6 +116,7 @@ PlayerSchema.methods.getEquipedArmor = getEquipedArmor;
 PlayerSchema.methods.getAttackSpeed = getAttackSpeed;
 PlayerSchema.methods.addItemToInventory = addItemToInventory;
 PlayerSchema.methods.gainXP = gainXP;
+PlayerSchema.methods.gainHP = gainHP;
 PlayerSchema.methods.saveWithRetries = saveWithRetries;
 // IUnit
 PlayerSchema.methods.getAttackDamage = getAttackDamage;

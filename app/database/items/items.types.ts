@@ -1,4 +1,5 @@
 import { Document, Model } from "mongoose";
+import { IPlayerDocument } from "../players/players.types";
 
 export interface IItem {
   __t: string;
@@ -19,8 +20,14 @@ export interface IArmor extends IItem {
   durability: number;
 }
 
+export interface IConsumableEffect {
+  effect: string;
+  value: number;
+}
+
 export interface IConsumable extends IItem {
   charges: number;
+  onConsumeEffects: IConsumableEffect[];
 }
 
 export interface IItemDocument extends IItem, Document {
@@ -37,6 +44,8 @@ export interface IArmorDocument extends IArmor, IItemDocument {}
 
 export interface IArmorModel extends Model<IArmorDocument> {}
 
-export interface IConsumableDocument extends IConsumable, IItemDocument {}
+export interface IConsumableDocument extends IConsumable, IItemDocument {
+  onConsume: (this: IItemDocument, target: IPlayerDocument) => string;
+}
 
 export interface IConsumableModel extends Model<IConsumableDocument> {}
