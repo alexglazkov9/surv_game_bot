@@ -63,6 +63,7 @@ export class GameInstance {
       battle.addToPlayersTeam(playerUnit);
     }
 
+    
     battle.startBattle();
     logger.verbose(`Spawning enemy [${enemy.name}] in ${this.chatId}`);
   };
