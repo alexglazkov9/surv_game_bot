@@ -54,7 +54,7 @@ export class Shop {
 
     const opts: TelegramBot.SendMessageOptions = {
       reply_to_message_id: this.messageId,
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: this.generateShopLayout(),
       },
@@ -169,7 +169,7 @@ export class Shop {
         const opts: TelegramBot.EditMessageTextOptions = {
           message_id: this.shopMessage?.message_id,
           chat_id: this.chatId,
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [inlineKeyboardBuyBtn, ...this.generateShopLayout()],
           },
@@ -204,7 +204,7 @@ export class Shop {
             const opts: TelegramBot.EditMessageTextOptions = {
               message_id: this.shopMessage?.message_id,
               chat_id: this.chatId,
-              parse_mode: "Markdown",
+              parse_mode: "HTML",
             };
 
             bot.editMessageText(`${player?.name} purchased ${item?.name} for ${item?.price}`, opts);
@@ -238,7 +238,7 @@ export class Shop {
               const opts: TelegramBot.EditMessageTextOptions = {
                 message_id: this.shopMessage?.message_id,
                 chat_id: this.chatId,
-                parse_mode: "Markdown",
+                parse_mode: "HTML",
               };
 
               bot.editMessageText(
@@ -267,7 +267,7 @@ export class Shop {
         const inlinekeyboard = this.generateShopLayout();
 
         const optsEdit: TelegramBot.EditMessageTextOptions = {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
           chat_id: this.chatId,
           message_id: this.shopMessage?.message_id,
           reply_markup: {
@@ -288,10 +288,10 @@ export class Shop {
 
   getStoreHeaderText = (item?: IItemDocument): string => {
     const section = SHOP_SECTIONS[this.sectionSelectedIndex];
-    let text = `🏪WELCOME TO *${SHOP_NAME}*🏪\n`;
-    text += `Section: *${section}*\n`;
+    let text = `🏪WELCOME TO <b>${SHOP_NAME}</b>🏪\n`;
+    text += `\n<pre>    </pre>▶️<b>${section.toUpperCase()}</b>◀️\n`;
     if (item !== undefined) {
-      text += `\n${item.getItemStats()}`;
+      text += `\n${item.getItemStats({ showPrice: true })}`;
     }
 
     return text;

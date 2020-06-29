@@ -24,7 +24,7 @@ export interface IConsumable extends IItem {
 }
 
 export interface IItemDocument extends IItem, Document {
-  getItemStats: (this: IItemDocument) => string;
+  getItemStats: (this: IItemDocument, options?: { showPrice?: boolean }) => string;
 }
 
 export interface IItemModel extends Model<IItemDocument> {}

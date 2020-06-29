@@ -10,7 +10,7 @@
     "serve": "node build/app.js",
     "dev": "nodemon",
     "watch-node": "nodemon build/app.js",
-    "script": "cd app/scripts && ts-node-script",
+    "script": "cd scripts && ts-node",
     "watch-ts": "tsc -w",
     "lint": "tslint -c tslint.json 'app/**/*.ts'"
   },

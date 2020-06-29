@@ -1,5 +1,11 @@
 import TelegramBot = require("node-telegram-bot-api");
-import { IItemDocument, IWeapon, IArmor } from "../../database/items/items.types";
+import {
+  IItemDocument,
+  IWeapon,
+  IArmor,
+  IItem,
+  IWeaponDocument,
+} from "../../database/items/items.types";
 import { IPlayerDocument } from "../../database/players/players.types";
 import { db, bot } from "../../app";
 import { logger } from "../../utils/logger";
@@ -57,7 +63,7 @@ export class Inventory {
 
     const opts: TelegramBot.SendMessageOptions = {
       reply_to_message_id: this.messageId,
-      parse_mode: "Markdown",
+      parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: this.generateLayout(),
       },
@@ -179,6 +185,7 @@ export class Inventory {
       return;
     }
 
+    let itemStats: string = "";
     switch (data.action) {
       // Player clicked on any item
       case CallbackActions.INVENTORY: {
@@ -188,6 +195,7 @@ export class Inventory {
             if (this.player) {
               this.player.inventory.forEach(async (item) => {
                 if (item._id.toString() === itemId) {
+                  itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
                   if (this.player?.equiped_weapon?.toString() === item._id.toString()) {
                     if (this.player !== undefined) this.player.equiped_weapon = null;
                   } else {
@@ -203,6 +211,7 @@ export class Inventory {
             if (this.player) {
               this.player.inventory.forEach(async (item) => {
                 if (item._id.toString() === itemId) {
+                  itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
                   if (this.player?.equiped_armor?.toString() === item._id.toString()) {
                     if (this.player !== undefined) this.player.equiped_armor = null;
                   } else {
@@ -219,13 +228,13 @@ export class Inventory {
         const opts: TelegramBot.EditMessageTextOptions = {
           message_id: this.inventoryMessage?.message_id,
           chat_id: this.chatId,
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: this.generateLayout(),
           },
         };
 
-        const msgTxt = this.getHeaderText();
+        const msgTxt = this.getHeaderText() + `\n${itemStats}`;
         if (msgTxt !== this.previousMsgText || opts !== this.previousOpts) {
           this.previousMsgText = msgTxt;
           this.previousOpts = opts;
@@ -257,7 +266,7 @@ export class Inventory {
         }
 
         const opts: TelegramBot.EditMessageTextOptions = {
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
           chat_id: this.chatId,
           message_id: this.inventoryMessage?.message_id,
           reply_markup: {
@@ -278,8 +287,9 @@ export class Inventory {
   };
 
   getHeaderText = (): string => {
-    let text = `Inventory of _${this.player?.name}_\n`;
-    text += `Section: *${INVENTORY_SECTIONS[this.sectionSelectedIndex]}*`;
+    let section = INVENTORY_SECTIONS[this.sectionSelectedIndex];
+    let text = `<pre>    </pre>▶️<b>${section.toUpperCase()}</b>◀️\n\n`;
+    text += `${this.player?.getShortStats()}\n`;
     return text;
   };
 

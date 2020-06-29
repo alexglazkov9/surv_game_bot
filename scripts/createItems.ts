@@ -1,9 +1,12 @@
 // import { ItemModel } from "../items/items.model";
-// import { connect, disconnect } from "../database/database";
-import { db } from "../app";
+import { connect, disconnect } from "../app/database/database";
+// import { WeaponModel, ArmorModel } from "../app/database/items/items.model";
+// import { logger } from "../app/utils/logger";
+//import { db } from "../app";
 
 (async () => {
-  // const db = connect();
+  // logger.debug("jere");
+  //connect();
 
   const weapons = [
     { name: "Club T1", damage: 2, ap_cost: 1, durability: 5, price: 5, attack_speed: 5000 },
@@ -137,11 +140,11 @@ import { db } from "../app";
   try {
     for (const weapon of weapons) {
       try {
-        await db?.WeaponModel.findOneAndUpdate({ name: weapon.name }, weapon, {
-          upsert: true,
-          new: true,
-          setDefaultsOnInsert: true,
-        });
+        // await WeaponModel.findOneAndUpdate({ name: weapon.name }, weapon, {
+        //   upsert: true,
+        //   new: true,
+        //   setDefaultsOnInsert: true,
+        // });
         console.log(`Created weapon ${weapon.name}`);
       } catch (e) {
         console.log(e);
@@ -149,11 +152,11 @@ import { db } from "../app";
     }
     for (const armor of armors) {
       try {
-        await db?.ArmorModel.findOneAndUpdate({ name: armor.name }, armor, {
-          upsert: true,
-          new: true,
-          setDefaultsOnInsert: true,
-        });
+        // await ArmorModel.findOneAndUpdate({ name: armor.name }, armor, {
+        //   upsert: true,
+        //   new: true,
+        //   setDefaultsOnInsert: true,
+        // });
         console.log(`Created armor ${armor.name}`);
       } catch (e) {
         console.log(e);
@@ -164,4 +167,6 @@ import { db } from "../app";
   } catch (e) {
     console.error(e);
   }
+
+  //disconnect();
 })();
