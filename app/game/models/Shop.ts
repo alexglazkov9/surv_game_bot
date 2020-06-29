@@ -55,7 +55,6 @@ export class Shop {
     }
 
     const opts: TelegramBot.SendMessageOptions = {
-      reply_to_message_id: this.messageId,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: this.generateShopLayout(),
@@ -63,7 +62,7 @@ export class Shop {
       disable_notification: true,
     };
 
-    this.shopMessage = await bot.sendMessage(this.chatId, this.getStoreHeaderText(), opts);
+    this.shopMessage = await bot.sendMessage(this.chatId, await this.getStoreHeaderText(), opts);
     bot.on("callback_query", this.onCallbackQuery);
   };
 
@@ -177,7 +176,7 @@ export class Shop {
           },
         };
 
-        const msgTxt = this.getStoreHeaderText(item);
+        const msgTxt = await this.getStoreHeaderText(item);
         if (msgTxt !== this.previousMsgText) {
           this.previousMsgText = msgTxt;
           bot.editMessageText(msgTxt, opts);
@@ -277,7 +276,7 @@ export class Shop {
           },
         };
 
-        const msgTxt = this.getStoreHeaderText();
+        const msgTxt = await this.getStoreHeaderText();
         if (msgTxt !== this.previousMsgText) {
           this.previousMsgText = msgTxt;
           bot.editMessageText(msgTxt, optsEdit);
@@ -288,10 +287,18 @@ export class Shop {
     }
   };
 
-  getStoreHeaderText = (item?: IItemDocument): string => {
+  getStoreHeaderText = async (item?: IItemDocument): Promise<string> => {
+    const player = await PlayerModel.findOne({
+      telegram_id: this.fromId,
+      chat_id: this.chatId,
+    });
+
     const section = SHOP_SECTIONS[this.sectionSelectedIndex];
     let text = `🏪WELCOME TO <b>${SHOP_NAME}</b>🏪\n`;
-    text += `\n<pre>    </pre>▶️<b>${section.toUpperCase()}</b>◀️\n`;
+    if (player) {
+      text += `<code>Your balance: 💰${player.money.toFixed(2)}</code>\n`;
+    }
+    text += `\n▶️<b>${section.toUpperCase()}</b>◀️\n`;
     if (item !== undefined) {
       text += `\n${item.getItemStats({ showPrice: true })}`;
     }
