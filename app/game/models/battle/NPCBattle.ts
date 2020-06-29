@@ -177,7 +177,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
 
       if (player !== undefined) {
         if (
-          Math.abs(player.level - this.getAverageLevel(SIDE.B)) >=
+          Math.abs(player.level - this.getAverageLevel(SIDE.B)) >
           GameParams.ALLOWED_LEVEL_DIFFERENCE
         ) {
           const optsCall: TelegramBot.AnswerCallbackQueryOptions = {
