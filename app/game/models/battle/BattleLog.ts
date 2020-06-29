@@ -1,10 +1,15 @@
 import { IUnit } from "../units/IUnit";
+import { SIDE } from "./NPCBattle";
 
 export class BattleLog {
   battleHistory: string[];
+  rewards: string[];
   constructor() {
     this.battleHistory = [];
+    this.rewards = [];
+
     this.battleHistory.push(`📜<b>Combat Log</b>\n`);
+    this.rewards.push(`\n\n🎁<b>Rewards</b>`);
   }
 
   unitJoined = (unit: IUnit) => {
@@ -26,15 +31,37 @@ export class BattleLog {
   };
 
   itemDropped = (unit: IUnit, item: string) => {
-    this.battleHistory.push(`🔮${unit.getName()} picks up ${item}`);
+    this.rewards.push(`🔮${unit.getName()} picks up ${item}`);
   };
 
-  expMoneyDropped = (exp: number, money: number) => {
-    this.battleHistory.push(`🎁Players get: ${exp.toFixed(1)} exp, ${money.toFixed(2)} money`);
+  expMoneyDropped = (units: IUnit[], exp: number, money: number) => {
+    let names = "";
+    units.forEach((unit, index) => {
+      names += `${unit.getName()}${index + 1 !== units.length ? "," : ""}`;
+    });
+    this.rewards.push(
+      `📯${names} get${units.length === 1 ? "s" : ""}: ${exp.toFixed(1)} exp, ${money.toFixed(
+        2
+      )} money`
+    );
   };
 
-  battleEnd = () => {
-    this.battleHistory.push(`\n<b>🛑Battle ended</b>\n`);
+  lastHitDrop = (unit: IUnit, target: IUnit, exp: number, money: number) => {
+    this.rewards.push(`📯${unit.getName()} gets: ${exp.toFixed(1)} exp, ${money.toFixed(2)} money`);
+  };
+
+  rewardsFrom = (unit: IUnit) => {
+    this.rewards.push(`\n💀<b>${unit.getName()}</b>💀`);
+  };
+
+  battleEnd = (side: SIDE) => {
+    let text = "";
+    if (side === SIDE.B) {
+      text += "Side 🟠 won the battle";
+    } else {
+      text += "Side 🔵 won the battle";
+    }
+    this.battleHistory.push(`\n<b>${text}</b>\n`);
   };
 
   addRecord = (record: string) => {
@@ -58,6 +85,10 @@ export class BattleLog {
     this.battleHistory.forEach((entry) => {
       battleLog += `${entry}\n`;
     });
-    return battleLog;
+    let rewardLog = "";
+    this.rewards.forEach((entry) => {
+      rewardLog += `${entry}\n`;
+    });
+    return battleLog + (this.rewards.length > 1 ? rewardLog : "");
   };
 }

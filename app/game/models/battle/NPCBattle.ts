@@ -14,7 +14,7 @@ import { BattleLog } from "./BattleLog";
 import { Enemy } from "../Enemy";
 import { GameParams } from "../../misc/GameParameters";
 
-enum SIDE {
+export enum SIDE {
   A,
   B,
 }
@@ -32,6 +32,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
   leaveBattleTimer?: NodeJS.Timeout;
   message?: TelegramBot.Message;
   previousMessageText?: string;
+  lastHitBy?: IUnit;
 
   constructor({ chatId, bot }: { chatId: number; bot: TelegramBot }) {
     super();
@@ -72,13 +73,11 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
 
   endBattle = async () => {
     logger.debug("Battle ends, cleaning up...");
-    this.battleLog.battleEnd();
+    this.battleLog.battleEnd(this.isAnyoneAlive(this.teamA) ? SIDE.A : SIDE.B);
     this.cleanUp();
-    this.rewardWinners().then(() => {
-      this.handleUpdate(true);
-      this.emit(BattleEvents.BATTLE_ENDED);
-      this.removeAllListeners();
-    });
+    this.handleUpdate(true);
+    this.emit(BattleEvents.BATTLE_ENDED);
+    this.removeAllListeners();
   };
 
   leaveBattle = () => {
@@ -115,6 +114,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
 
       // Hadnles attack
       const dmgDealt = unit.attack(target);
+      this.lastHitBy = unit;
 
       this.battleLog.attacked(unit, target, dmgDealt, isUnitTeamA ? "🔹" : "🔸");
 
@@ -123,6 +123,10 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
         logger.debug(`${target.getName()} died`);
 
         this.battleLog.killed(unit, target);
+
+        if (isUnitTeamA) {
+          await this.rewardPlayers(target as Enemy, unit);
+        }
 
         this.cleanUpUnit(target);
       }
@@ -257,7 +261,7 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
         delete opts.reply_markup;
       }
 
-      const messageText = `${this.getBattleInfo()}\n\n ${
+      const messageText = `${this.getBattleInfo()}\n\n${
         this.battleLog.hasRecords() ? this.battleLog.getBattleLog() : ""
       }`;
       // Only edit message if the text actually changed
@@ -381,37 +385,52 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
     return averageLevel;
   };
 
-  rewardWinners = async () => {
-    logger.debug("Rewarding players");
-    if (this.isAnyoneAlive(this.teamA)) {
-      let money = 0;
-      let exp = 0;
+  rewardPlayers = async (unitKilled: Enemy, lastHitBy: IUnit) => {
+    this.battleLog.rewardsFrom(unitKilled);
+    logger.debug(`rewarding for kill`);
+    const money = unitKilled.moneyOnDeath;
+    const exp = unitKilled.expOnDeath;
 
-      for (const unit of this.teamB) {
-        const itemDrop = (unit as Enemy).itemDrop;
-        if (itemDrop) {
-          const rndUnit = this.getRandomUnit(SIDE.A, true);
-          await (rndUnit as IPlayerDocument).addItemToInventory(itemDrop);
-          await (rndUnit as IPlayerDocument).saveWithRetries();
-          this.battleLog.itemDropped(rndUnit, itemDrop);
-        }
+    const numberAlive = this.getNumberOfAliveUnits(SIDE.A);
+    logger.debug(`Alive ${numberAlive}`);
 
-        money += (unit as Enemy).moneyOnDeath;
-        exp += (unit as Enemy).expOnDeath;
-      }
+    if (numberAlive === 1) {
+      (lastHitBy as IPlayerDocument).gainXP(exp);
+      (lastHitBy as IPlayerDocument).money += money;
 
-      const numberAlive = this.getNumberOfAliveUnits(SIDE.A);
-      const moneyPerUnit = money / numberAlive;
-      const expPerUnit = exp / numberAlive;
+      await (lastHitBy as IPlayerDocument).saveWithRetries();
+      this.battleLog.lastHitDrop(lastHitBy, unitKilled, exp, money);
+    } else {
+      const moneyLastHit = (money / numberAlive) * 1.1;
+      const expLastHit = (exp / numberAlive) * 1.1;
+      const moneyPerUnit = (money - moneyLastHit) / (numberAlive - 1);
+      const expPerUnit = (exp - expLastHit) / (numberAlive - 1);
+
+      const unitsRewarded = [];
       for (const unit of this.teamA) {
         if (unit.isAlive()) {
-          (unit as IPlayerDocument).gainXP(expPerUnit);
-          (unit as IPlayerDocument).money += moneyPerUnit;
+          if (unit === lastHitBy) {
+            (unit as IPlayerDocument).gainXP(expLastHit);
+            (unit as IPlayerDocument).money += moneyLastHit;
+            this.battleLog.lastHitDrop(lastHitBy, unitKilled, expLastHit, moneyLastHit);
+          } else {
+            (unit as IPlayerDocument).gainXP(expPerUnit);
+            (unit as IPlayerDocument).money += moneyPerUnit;
+            unitsRewarded.push(unit);
+          }
           await (unit as IPlayerDocument).saveWithRetries();
         }
       }
+      this.battleLog.expMoneyDropped(unitsRewarded, expPerUnit, moneyPerUnit);
+    }
 
-      this.battleLog.expMoneyDropped(expPerUnit, moneyPerUnit);
+    const itemDrop = unitKilled.itemDrop;
+
+    if (itemDrop) {
+      const rndUnit = this.getRandomUnit(SIDE.A, true);
+      await (rndUnit as IPlayerDocument).addItemToInventory(itemDrop);
+      await (rndUnit as IPlayerDocument).saveWithRetries();
+      this.battleLog.itemDropped(rndUnit, itemDrop);
     }
   };
 }

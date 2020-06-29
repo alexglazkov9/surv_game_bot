@@ -43,6 +43,7 @@ export class GameInstance {
     logger.debug("in spawnEnemy");
 
     const enemy = await this.getRandomEnemy();
+    // const enemy2 = await this.getRandomEnemy(enemy.level);
 
     const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
 
@@ -51,6 +52,7 @@ export class GameInstance {
     }
 
     battle.addToNPCTeam(enemy);
+    // battle.addToNPCTeam(enemy2);
 
     // 30% chance to instantly start fighting someone
     if (getRandomInt(0, 10) >= 7) {
@@ -67,8 +69,10 @@ export class GameInstance {
     logger.verbose(`Spawning enemy [${enemy.name}] in ${this.chatId}`);
   };
 
-  getRandomEnemy = async (): Promise<Enemy> => {
-    const enemyLevel = (await PlayerModel.getRandomMinMaxLvl(this.chatId)) ?? 1;
+  getRandomEnemy = async (enemyLevel?: number): Promise<Enemy> => {
+    if (enemyLevel === undefined) {
+      enemyLevel = (await PlayerModel.getRandomMinMaxLvl(this.chatId)) ?? 1;
+    }
     logger.debug(enemyLevel);
     // Randomly picks enemy type to spawn, repicks if lvl requirements are out of bounds
     let enemyType;
