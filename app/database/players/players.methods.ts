@@ -9,6 +9,7 @@ import { Enemy } from "../../game/models/Enemy";
 import { CallbackData } from "../../game/models/CallbackData";
 import { IUnit } from "../../game/models/units/IUnit";
 import { BattleEvents } from "../../game/models/battle/BattleEvents";
+import { ItemModel } from "../items/items.model";
 
 const DEFAULT_ATTACK_SPEED = 5000;
 
@@ -195,7 +196,7 @@ export async function hitEnemy(this: IPlayerDocument, enemy: Enemy): Promise<voi
 }
 
 export async function addItemToInventory(this: IPlayerDocument, itemName: string) {
-  const item = await db?.ItemModel.findOne({ name: itemName });
+  const item = await ItemModel.findOne({ name: itemName });
   if (item) {
     item._id = Types.ObjectId();
     item.isNew = true;
@@ -258,6 +259,24 @@ export async function gainAP(this: IPlayerDocument, baseAmount: number = 1): Pro
 export function gainXP(this: IPlayerDocument, amount: number): void {
   this.experience += amount;
   this.levelUp(false);
+}
+
+export function gainHP(
+  this: IPlayerDocument,
+  amount: number,
+  opts: { isPercentage: boolean }
+): void {
+  if (opts?.isPercentage) {
+    this.health_points += this.health_points_max * (amount / 100);
+  } else {
+    this.health_points += amount;
+  }
+
+  if (this.health_points > this.health_points_max) {
+    this.health_points = this.health_points_max;
+  }
+
+  this.saveWithRetries();
 }
 
 export function getEquipedWeapon(this: IPlayerDocument): IWeapon | null {

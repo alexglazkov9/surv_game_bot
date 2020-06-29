@@ -6,10 +6,12 @@ import { CallbackActions } from "../misc/CallbackConstants";
 import { logger } from "../../utils/logger";
 import { Types } from "mongoose";
 import { ItemType } from "../../database/items/ItemType";
+import { PlayerModel } from "../../database/players/players.model";
+import { ItemModel } from "../../database/items/items.model";
 
 // Number of columns in the shop
 const COL_NUM = 2;
-const SHOP_SECTIONS = [ItemType.ARMOR, ItemType.WEAPON];
+const SHOP_SECTIONS = [ItemType.ARMOR, ItemType.WEAPON, ItemType.CONSUMABLE];
 const SHOP_NAME = "KORZINKA.UZ";
 const SHOP_BUY_BTN_TXT = "💲BUY💲";
 
@@ -40,7 +42,7 @@ export class Shop {
   pullItems = async () => {
     // Pull all items to be displayed in the shop
     try {
-      this.items = await db?.ItemModel.find({});
+      this.items = await ItemModel.find({});
     } catch (e) {
       logger.error(e);
     }
@@ -185,7 +187,7 @@ export class Shop {
       }
       // Player clicked BUY button
       case CallbackActions.SHOP_BUY: {
-        const player = await db?.PlayerModel.findOne({
+        const player = await PlayerModel.findOne({
           telegram_id: data.telegramId,
           chat_id: this.chatId,
         });
@@ -229,7 +231,7 @@ export class Shop {
         switch (data.payload) {
           case CallbackActions.SHOP_NAV_CLOSE: {
             const telegramId = callbackQuery.from.id;
-            const player = await db?.PlayerModel.findOne({
+            const player = await PlayerModel.findOne({
               telegram_id: telegramId,
               chat_id: this.chatId,
             });

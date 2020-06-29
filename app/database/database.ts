@@ -1,7 +1,4 @@
 import Mongoose = require("mongoose");
-import { PlayerModel } from "./players/players.model";
-import { SessionModel } from "./sessions/sessions.model";
-import { ItemModel, WeaponModel, ConsumableModel, ArmorModel } from "./items/items.model";
 import { logger } from "../utils/logger";
 
 let database: Mongoose.Connection;
@@ -39,14 +36,14 @@ export const connect = () => {
     logger.error("Error connecting to database");
   });
 
-  return {
-    PlayerModel,
-    SessionModel,
-    ItemModel,
-    WeaponModel,
-    ArmorModel,
-    ConsumableModel,
-  };
+  // return {
+  //   PlayerModel,
+  //   SessionModel,
+  //   ItemModel,
+  //   WeaponModel,
+  //   ArmorModel,
+  //   ConsumableModel,
+  // };
 };
 
 export const disconnect = () => {

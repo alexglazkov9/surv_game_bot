@@ -11,6 +11,7 @@ export class CallbackActions {
   static INVENTORY_NAV_PREV = "invnav_prev";
   static INVENTORY_NAV_NEXT = "invnav_next";
   static INVENTORY_NAV_CLOSE = "invnav_close";
+  static INVENTORY_USE = "inv_use";
 
   // SHOP
   static SHOP = "shop";
