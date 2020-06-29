@@ -2,6 +2,7 @@ import EventEmitter = require("events");
 
 export interface IUnit extends EventEmitter.EventEmitter {
   attackTimer?: NodeJS.Timeout;
+  level: number;
 
   getAttackDamage(): number;
   getAttackSpeed(): number;

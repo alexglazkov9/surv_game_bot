@@ -9,9 +9,10 @@ import { getRandomInt, sleep } from "../../../utils/utils";
 import { logger } from "../../../utils/logger";
 import { CallbackActions } from "../../misc/CallbackConstants";
 import { CallbackData } from "../CallbackData";
-import { IPlayerDocument } from "../../../database/players/players.types";
+import { IPlayerDocument, IPlayer } from "../../../database/players/players.types";
 import { BattleLog } from "./BattleLog";
 import { Enemy } from "../Enemy";
+import { GameParams } from "../../misc/GameParameters";
 
 enum SIDE {
   A,
@@ -175,6 +176,18 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
       });
 
       if (player !== undefined) {
+        if (
+          Math.abs(player.level - this.getAverageLevel(SIDE.B)) >=
+          GameParams.ALLOWED_LEVEL_DIFFERENCE
+        ) {
+          const optsCall: TelegramBot.AnswerCallbackQueryOptions = {
+            callback_query_id: callbackQuery.id,
+            text: "Level difference must be 5 or less",
+            show_alert: false,
+          };
+          this.bot.answerCallbackQuery(optsCall);
+          return;
+        }
         if (
           this.teamA.findIndex((unit) => {
             return (
@@ -349,6 +362,23 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
     }
 
     return count;
+  };
+
+  getAverageLevel = (side: SIDE) => {
+    let averageLevel = 0;
+    switch (side) {
+      case SIDE.A: {
+        this.teamA.forEach((unit) => (averageLevel += unit.level));
+        averageLevel = Math.round(averageLevel / this.teamA.length);
+        break;
+      }
+      case SIDE.B: {
+        this.teamB.forEach((unit) => (averageLevel += unit.level));
+        averageLevel = Math.round(averageLevel / this.teamB.length);
+        break;
+      }
+    }
+    return averageLevel;
   };
 
   rewardWinners = async () => {

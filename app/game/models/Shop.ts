@@ -5,7 +5,7 @@ import { CallbackData } from "./CallbackData";
 import { CallbackActions } from "../misc/CallbackConstants";
 import { logger } from "../../utils/logger";
 import { Types } from "mongoose";
-import { ItemType } from "../../database/items/ItemType";
+import { ItemType } from "../misc/ItemType";
 import { PlayerModel } from "../../database/players/players.model";
 import { ItemModel } from "../../database/items/items.model";
 

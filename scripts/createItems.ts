@@ -1,6 +1,6 @@
 import { connect, disconnect } from "../app/database/database";
 import { WeaponModel, ArmorModel, ConsumableModel } from "../app/database/items/items.model";
-import { ConsumableEffects } from "../app/database/items/ConsumableEffects";
+import { ConsumableEffects } from "../app/game/misc/ConsumableEffects";
 
 (async () => {
   connect();

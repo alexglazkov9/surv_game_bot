@@ -1,5 +1,5 @@
 import { IConsumableDocument, IConsumable } from "./items.types";
-import { ConsumableEffects } from "./ConsumableEffects";
+import { ConsumableEffects } from "../../game/misc/ConsumableEffects";
 import { IPlayerDocument } from "../players/players.types";
 
 export function onConsume(this: IConsumableDocument, target: IPlayerDocument): void {

@@ -7,7 +7,7 @@ import {
   IArmorModel,
 } from "./items.types";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "./items.schema";
-import { ItemType } from "./ItemType";
+import { ItemType } from "../../game/misc/ItemType";
 
 export const ItemModel = mongoose.model<IItemDocument>(ItemType.ITEM, ItemSchema) as IItemModel;
 

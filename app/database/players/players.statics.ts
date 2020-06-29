@@ -110,5 +110,14 @@ export async function getRandomMinMaxLvl(this: IPlayerModel, chatId: number): Pr
     }
   });
 
-  return getRandomInt(min, max + 2);
+  let rndLvl: number;
+  do {
+    rndLvl = getRandomInt(min, max + 2);
+  } while (
+    !playersInChat.some((player) => {
+      return Math.abs(rndLvl - player.level) <= 5;
+    })
+  );
+
+  return rndLvl;
 }

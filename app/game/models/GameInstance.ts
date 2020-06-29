@@ -7,6 +7,7 @@ import enemies = require("../../database/enemies/enemies.json");
 import { getRandomInt, sleep } from "../../utils/utils";
 import { NPCBattle } from "./battle/NPCBattle";
 import { BattleEvents } from "./battle/BattleEvents";
+import { GameParams } from "../misc/GameParameters";
 
 const RESPAWN_RATE = 60 * 60 * 1000;
 const HP_REGEN_RATE = 60 * 60 * 1000;
@@ -32,7 +33,7 @@ export class GameInstance {
   };
 
   startSpawning = async () => {
-    const msecs = getRandomInt(15, 45) * 60 * 1000;
+    const msecs = getRandomInt(5, 30) * 60 * 1000;
     logger.verbose(`Start spawning in ${this.chatId} in ${msecs / 1000} seconds`);
     await sleep(msecs);
     this.spawnEnemy();
@@ -42,7 +43,6 @@ export class GameInstance {
     logger.debug("in spawnEnemy");
 
     const enemy = await this.getRandomEnemy();
-    const enemy2 = await this.getRandomEnemy();
 
     const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
 
@@ -54,7 +54,12 @@ export class GameInstance {
 
     // 30% chance to instantly start fighting someone
     if (getRandomInt(0, 10) >= 7) {
-      const playerUnit = await PlayerModel.getRandomPlayer(this.chatId, true);
+      let playerUnit;
+      // Makes sure enemy attacks player of the same level
+      do {
+        playerUnit = await PlayerModel.getRandomPlayer(this.chatId, true);
+      } while (Math.abs(playerUnit.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
+
       battle.addToPlayersTeam(playerUnit);
     }
 

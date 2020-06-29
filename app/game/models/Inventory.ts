@@ -11,7 +11,7 @@ import { bot } from "../../app";
 import { logger } from "../../utils/logger";
 import { CallbackActions } from "../misc/CallbackConstants";
 import { CallbackData } from "./CallbackData";
-import { ItemType } from "../../database/items/ItemType";
+import { ItemType } from "../misc/ItemType";
 import { PlayerModel } from "../../database/players/players.model";
 
 // Number of columns in the inventory

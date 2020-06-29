@@ -1,5 +1,5 @@
 import { IItemDocument, IWeaponDocument, IArmorDocument, IConsumableDocument } from "./items.types";
-import { ItemType } from "./ItemType";
+import { ItemType } from "../../game/misc/ItemType";
 
 export function getItemStats(this: IItemDocument, options?: { showPrice: boolean }): string {
   let statsString = "";
