@@ -11,7 +11,7 @@ import { CallbackActions } from "../../misc/CallbackConstants";
 import { CallbackData } from "../CallbackData";
 import { IPlayerDocument, IPlayer } from "../../../database/players/players.types";
 import { BattleLog } from "./BattleLog";
-import { Enemy } from "../Enemy";
+import { Enemy } from "../units/Enemy";
 import { GameParams } from "../../misc/GameParameters";
 
 export enum SIDE {

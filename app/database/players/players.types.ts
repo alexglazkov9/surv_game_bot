@@ -1,11 +1,12 @@
 import { Document, Model } from "mongoose";
 import { IItem, IWeapon, IArmor } from "../items/items.types";
-import { Enemy } from "../../game/models/Enemy";
+import { Enemy } from "../../game/models/units/Enemy";
 import { IUnit } from "../../game/models/units/IUnit";
 
 export interface IPlayer {
   telegram_id: number;
   chat_id: number;
+  private_chat_id: number;
   name: string;
   health_points_max: number;
   health_points: number;
@@ -45,6 +46,7 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   gainXP: (this: IPlayerDocument, amount: number) => void;
   gainHP: (this: IPlayerDocument, amount: number, opts?: { isPercentage?: boolean }) => void;
   saveWithRetries: (this: IPlayerDocument) => Promise<void>;
+  getLatest: (this: IPlayerDocument) => Promise<IPlayerDocument>;
   // IUnit
   getAttackDamage: (this: IPlayerDocument) => number;
   getArmor: (this: IPlayerDocument) => number;
@@ -63,7 +65,7 @@ export interface IPlayerModel extends Model<IPlayerDocument> {
 
   findPlayerByName: (
     this: IPlayerModel,
-    { name, chat_id }: { name: string; chat_id: number }
+    { name }: { name: string }
   ) => Promise<IPlayerDocument | null>;
 
   createNewPlayer: (

@@ -1,14 +1,14 @@
 import EventEmitter = require("events");
-import { IPlayerDocument } from "../../database/players/players.types";
-import { getRandomInt } from "../../utils/utils";
-import { CallbackData } from "./CallbackData";
+import { IPlayerDocument } from "../../../database/players/players.types";
+import { getRandomInt } from "../../../utils/utils";
+import { CallbackData } from "../CallbackData";
 import TelegramBot = require("node-telegram-bot-api");
-import { CallbackActions } from "../misc/CallbackConstants";
-import { logger } from "../../utils/logger";
-import { PlayerModel } from "../../database/players/players.model";
-import { IUnit } from "./units/IUnit";
-import { BattleEvents } from "./battle/BattleEvents";
-import { INPCUnit } from "./units/INPCUnit";
+import { CallbackActions } from "../../misc/CallbackConstants";
+import { logger } from "../../../utils/logger";
+import { PlayerModel } from "../../../database/players/players.model";
+import { IUnit } from "./IUnit";
+import { BattleEvents } from "../battle/BattleEvents";
+import { INPCUnit } from "./INPCUnit";
 
 const UPDATE_DELAY = 5000;
 const ATTACK_CHAT_EVENT = "attack_chat_event";

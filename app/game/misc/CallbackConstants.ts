@@ -20,4 +20,7 @@ export class CallbackActions {
   static SHOP_NAV_NEXT = "shop_nav_next";
   static SHOP_NAV_CLOSE = "shop_nav_close";
   static SHOP_BUY = "shop_buy";
+
+  // START
+  static START_CHARACTER_PICKED = "charpckd";
 }

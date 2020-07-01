@@ -23,7 +23,6 @@ import {
   hitEnemy,
   die,
   levelUp,
-  sendPlayerStats,
   getMinStats,
   isAlive,
   getEquipedWeapon,
@@ -41,12 +40,14 @@ import {
   getHpIndicator,
   getArmor,
   gainHP,
+  getLatest,
 } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
 
 const PlayerSchema = new Schema({
   telegram_id: Number,
   chat_id: Number,
+  private_chat_id: Number,
   name: String,
   health_points_max: { type: Number, default: 10 },
   health_points: { type: Number, default: 10 },
@@ -110,7 +111,7 @@ PlayerSchema.methods.gainAP = gainAP;
 PlayerSchema.methods.hitEnemy = hitEnemy;
 PlayerSchema.methods.die = die;
 PlayerSchema.methods.levelUp = levelUp;
-PlayerSchema.methods.sendPlayerStats = sendPlayerStats;
+// PlayerSchema.methods.sendPlayerStats = sendPlayerStats;
 PlayerSchema.methods.getEquipedWeapon = getEquipedWeapon;
 PlayerSchema.methods.getEquipedArmor = getEquipedArmor;
 PlayerSchema.methods.getAttackSpeed = getAttackSpeed;
@@ -118,6 +119,7 @@ PlayerSchema.methods.addItemToInventory = addItemToInventory;
 PlayerSchema.methods.gainXP = gainXP;
 PlayerSchema.methods.gainHP = gainHP;
 PlayerSchema.methods.saveWithRetries = saveWithRetries;
+PlayerSchema.methods.getLatest = getLatest;
 // IUnit
 PlayerSchema.methods.getAttackDamage = getAttackDamage;
 PlayerSchema.methods.getArmor = getArmor;

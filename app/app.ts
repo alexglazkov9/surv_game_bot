@@ -6,6 +6,10 @@ import { GameManager } from "./game/models/GameManager";
 let token: string;
 const botOptions: TelegramBot.ConstructorOptions = {};
 
+if (process.env.TOKEN === undefined) {
+  logger.error("Telegram Bot token is not set");
+}
+
 if (process.env.NODE_ENV === "production") {
   token = process.env.TOKEN ?? "";
   const port: number = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;

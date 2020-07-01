@@ -5,11 +5,12 @@ import { IWeaponDocument, IWeapon, IArmor } from "../items/items.types";
 import { Types } from "mongoose";
 import { CallbackActions } from "../../game/misc/CallbackConstants";
 import { logger } from "../../utils/logger";
-import { Enemy } from "../../game/models/Enemy";
+import { Enemy } from "../../game/models/units/Enemy";
 import { CallbackData } from "../../game/models/CallbackData";
 import { IUnit } from "../../game/models/units/IUnit";
 import { BattleEvents } from "../../game/models/battle/BattleEvents";
 import { ItemModel } from "../items/items.model";
+import { PlayerModel } from "./players.model";
 
 const DEFAULT_ATTACK_SPEED = 5000;
 
@@ -18,12 +19,14 @@ export function getPlayerStats(this: IPlayerDocument): string {
   const equipedArmor = this.getEquipedArmor();
   logger.debug(equipedArmor);
   logger.debug(equipedWeapon);
-  const statsString = `*${this.name}* - ${this.level} lvl ${
+  const statsString = `<b>${this.name}</b> - ${this.level} lvl ${
     this.health_points <= 0 ? "💀DEAD💀" : ""
   }\n
      💚HP: ${this.health_points.toFixed(1)}\\${this.health_points_max.toFixed(1)}
-     🛡Armor: ${equipedArmor ? `*${equipedArmor.armor}*(${equipedArmor.durability})` : "0(0)"}
-     🗡Damage: ${equipedWeapon ? `*${equipedWeapon.damage}*(${equipedWeapon.durability})` : "1(∞)"}
+     🛡Armor: ${equipedArmor ? `<b>${equipedArmor.armor}</b>(${equipedArmor.durability})` : "0(0)"}
+     🗡Damage: ${
+       equipedWeapon ? `<b>${equipedWeapon.damage}</b>(${equipedWeapon.durability})` : "1(∞)"
+     }
      ❇Exp: ${this.experience.toFixed(1)}\\${this.getExpCap().toFixed(0)}
      💰Cash: ${this.money.toFixed(2)}
     `;
@@ -33,58 +36,6 @@ export function getPlayerStats(this: IPlayerDocument): string {
 export function getMinStats(this: IPlayerDocument): string {
   const statsString = `(💚${this.health_points.toFixed(1)})`;
   return statsString;
-}
-
-export async function sendPlayerStats(
-  this: IPlayerDocument,
-  messageId: number,
-  callerTId?: number
-): Promise<void> {
-  const inlineKeyboardNav: TelegramBot.InlineKeyboardButton[] = [];
-  const callbackData = new CallbackData({
-    action: CallbackActions.PLAYER_STATS_NAV,
-    telegram_id: callerTId ?? this.telegram_id,
-    payload: CallbackActions.PLAYERS_STATS_CLOSE,
-  });
-  const data = callbackData.toJson();
-  inlineKeyboardNav.push({
-    text: "❌CLOSE",
-    callback_data: data,
-  });
-  const inlineKeyboard: TelegramBot.InlineKeyboardButton[][] = [];
-  inlineKeyboard.push(inlineKeyboardNav);
-  const opts: TelegramBot.SendMessageOptions = {
-    reply_to_message_id: messageId,
-    parse_mode: "Markdown",
-    reply_markup: {
-      inline_keyboard: inlineKeyboard,
-    },
-  };
-  const messageSent = await bot.sendMessage(this.chat_id, this.getPlayerStats(), opts);
-  const onCallbackQuery = async (callbackQuery: TelegramBot.CallbackQuery) => {
-    if (messageSent.message_id !== callbackQuery.message?.message_id) {
-      return;
-    }
-    const action = callbackQuery.data ?? " ";
-    const senderId = callbackQuery.from.id;
-
-    if (action[0] === "{") {
-      const cbData = CallbackData.fromJson(action);
-      if (cbData.telegramId === senderId && cbData.action === CallbackActions.PLAYER_STATS_NAV) {
-        if (cbData.payload === CallbackActions.PLAYERS_STATS_CLOSE) {
-          bot.deleteMessage(callbackQuery.message.chat.id, messageId.toString());
-          bot.deleteMessage(
-            callbackQuery.message.chat.id,
-            callbackQuery.message.message_id.toString()
-          );
-          bot.removeListener("callback_query", onCallbackQuery);
-        }
-      }
-    }
-  };
-
-  bot.on("callback_query", onCallbackQuery);
-  return Promise.resolve();
 }
 
 export async function recalculateAndSave(this: IPlayerDocument): Promise<void> {
@@ -376,4 +327,8 @@ export function getShortStats(this: IPlayerDocument, isDead: boolean = false): s
 export function getHpIndicator(this: IPlayerDocument): string {
   const hpIndicator = `💚${this.health_points.toFixed(1)}`;
   return hpIndicator;
+}
+
+export async function getLatest(this: IPlayerDocument) {
+  return await PlayerModel.findOne({ _id: this._id });
 }
