@@ -5,14 +5,14 @@ import {
   IArmor,
   IConsumable,
   IConsumableDocument,
-} from "../../database/items/items.types";
-import { IPlayerDocument } from "../../database/players/players.types";
-import { bot } from "../../app";
-import { logger } from "../../utils/logger";
-import { CallbackActions } from "../misc/CallbackConstants";
-import { CallbackData } from "./CallbackData";
-import { ItemType } from "../misc/ItemType";
-import { PlayerModel } from "../../database/players/players.model";
+} from "../../../database/items/items.types";
+import { IPlayerDocument, IPlayer } from "../../../database/players/players.types";
+import { bot } from "../../../app";
+import { logger } from "../../../utils/logger";
+import { CallbackActions } from "../../misc/CallbackConstants";
+import { CallbackData } from "../CallbackData";
+import { ItemType } from "../../misc/ItemType";
+import { PlayerModel } from "../../../database/players/players.model";
 
 // Number of columns in the inventory
 const COL_NUM = 2;
@@ -21,9 +21,10 @@ const USE_BTN_TXT = "USE";
 const EQUIP_BTN_TXT = "EQUIP";
 
 export class Inventory {
-  chatId: number;
-  fromId: number;
-  messageId: number;
+  character: IPlayer;
+  // chatId: number;
+  // fromId: number;
+  // messageId: number;
   inventoryMessage?: TelegramBot.Message;
   items: IItemDocument[] | undefined;
   player: IPlayerDocument | undefined;
@@ -31,18 +32,11 @@ export class Inventory {
   previousMsgText?: string;
   previousOpts?: any;
 
-  constructor({
-    chat_id,
-    from_id,
-    message_id,
-  }: {
-    chat_id: number;
-    from_id: number;
-    message_id: number;
-  }) {
-    this.chatId = chat_id;
-    this.fromId = from_id;
-    this.messageId = message_id;
+  constructor({ character }: { character: IPlayer }) {
+    this.character = character;
+    // this.chatId = chat_id;
+    // this.fromId = from_id;
+    // this.messageId = message_id;
     this.sectionSelectedIndex = 0;
   }
 
@@ -50,8 +44,8 @@ export class Inventory {
     // Pull all items to be displayed in the shop
     try {
       this.player = await PlayerModel.findPlayer({
-        telegram_id: this.fromId,
-        chat_id: this.chatId,
+        telegram_id: this.character.telegram_id,
+        chat_id: this.character.chat_id,
       });
     } catch (e) {
       logger.error(e);
@@ -65,7 +59,6 @@ export class Inventory {
     }
 
     const opts: TelegramBot.SendMessageOptions = {
-      reply_to_message_id: this.messageId,
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: this.generateLayout(),
@@ -73,7 +66,11 @@ export class Inventory {
       disable_notification: true,
     };
 
-    this.inventoryMessage = await bot.sendMessage(this.chatId, this.getHeaderText(), opts);
+    this.inventoryMessage = await bot.sendMessage(
+      this.character.private_chat_id,
+      this.getHeaderText(),
+      opts
+    );
     bot.on("callback_query", this.onCallbackQuery);
   };
 
@@ -119,7 +116,7 @@ export class Inventory {
 
             const cbData = new CallbackData({
               action: CallbackActions.INVENTORY,
-              telegram_id: this.fromId,
+              telegram_id: this.character.telegram_id,
               payload: itemsFiltered[index]._id,
             });
             const cbDataJson = cbData.toJson();
@@ -145,7 +142,7 @@ export class Inventory {
       // NAVIGATION - PREVIOUS PAGE
       let callbackData = new CallbackData({
         action: CallbackActions.INVENTORY_NAV,
-        telegram_id: this.fromId,
+        telegram_id: this.character.telegram_id,
         payload: CallbackActions.INVENTORY_NAV_PREV,
       });
       let data = callbackData.toJson();
@@ -157,7 +154,7 @@ export class Inventory {
       // NAVIGATION - CLOSE SHOP
       callbackData = new CallbackData({
         action: CallbackActions.INVENTORY_NAV,
-        telegram_id: this.fromId,
+        telegram_id: this.character.telegram_id,
         payload: CallbackActions.INVENTORY_NAV_CLOSE,
       });
       data = callbackData.toJson();
@@ -169,7 +166,7 @@ export class Inventory {
       // NAVIGATION - NEXT PAGE
       callbackData = new CallbackData({
         action: CallbackActions.INVENTORY_NAV,
-        telegram_id: this.fromId,
+        telegram_id: this.character.telegram_id,
         payload: CallbackActions.INVENTORY_NAV_NEXT,
       });
       data = callbackData.toJson();
@@ -203,7 +200,7 @@ export class Inventory {
 
         const callbackData = new CallbackData({
           action: CallbackActions.INVENTORY_USE,
-          telegram_id: this.fromId,
+          telegram_id: this.character.telegram_id,
           payload: itemId,
         });
 
@@ -225,7 +222,7 @@ export class Inventory {
 
         const opts: TelegramBot.EditMessageTextOptions = {
           message_id: this.inventoryMessage?.message_id,
-          chat_id: this.chatId,
+          chat_id: this.character.private_chat_id,
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [inlineKeyboardUseBtn, ...this.generateLayout()],
@@ -302,7 +299,7 @@ export class Inventory {
 
         const opts: TelegramBot.EditMessageTextOptions = {
           message_id: this.inventoryMessage?.message_id,
-          chat_id: this.chatId,
+          chat_id: this.character.private_chat_id,
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: this.generateLayout(),
@@ -342,7 +339,7 @@ export class Inventory {
 
         const opts: TelegramBot.EditMessageTextOptions = {
           parse_mode: "HTML",
-          chat_id: this.chatId,
+          chat_id: this.character.private_chat_id,
           message_id: this.inventoryMessage?.message_id,
           reply_markup: {
             inline_keyboard: this.generateLayout(),
@@ -370,10 +367,13 @@ export class Inventory {
 
   cleanUp = () => {
     if (this.inventoryMessage) {
-      bot.deleteMessage(this.chatId, this.inventoryMessage?.message_id.toString());
+      bot.deleteMessage(
+        this.character.private_chat_id,
+        this.inventoryMessage?.message_id.toString()
+      );
     }
 
-    bot.deleteMessage(this.chatId, this.messageId.toString());
+    //bot.deleteMessage(this.chatId, this.messageId.toString());
 
     bot.removeListener("callback_query", this.onCallbackQuery);
   };

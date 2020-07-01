@@ -1,13 +1,14 @@
-import { IItemDocument } from "../../database/items/items.types";
-import { db, bot } from "../../app";
+import { IItemDocument } from "../../../database/items/items.types";
+import { db, bot } from "../../../app";
 import TelegramBot = require("node-telegram-bot-api");
-import { CallbackData } from "./CallbackData";
-import { CallbackActions } from "../misc/CallbackConstants";
-import { logger } from "../../utils/logger";
+import { CallbackData } from "../CallbackData";
+import { CallbackActions } from "../../misc/CallbackConstants";
+import { logger } from "../../../utils/logger";
 import { Types } from "mongoose";
-import { ItemType } from "../misc/ItemType";
-import { PlayerModel } from "../../database/players/players.model";
-import { ItemModel } from "../../database/items/items.model";
+import { ItemType } from "../../misc/ItemType";
+import { PlayerModel } from "../../../database/players/players.model";
+import { ItemModel } from "../../../database/items/items.model";
+import { IPlayer, IPlayerDocument } from "../../../database/players/players.types";
 
 // Number of columns in the shop
 const COL_NUM = 2;
@@ -16,26 +17,20 @@ const SHOP_NAME = "KORZINKA.UZ";
 const SHOP_BUY_BTN_TXT = "💲BUY💲";
 
 export class Shop {
-  chatId: number;
-  fromId: number;
-  messageId: number;
+  player: IPlayer;
+  // chatId: number;
+  // fromId: number;
+  // messageId: number;
   shopMessage?: TelegramBot.Message;
   items: IItemDocument[] | undefined;
   sectionSelectedIndex: number;
   previousMsgText?: string;
 
-  constructor({
-    chat_id,
-    from_id,
-    message_id,
-  }: {
-    chat_id: number;
-    from_id: number;
-    message_id: number;
-  }) {
-    this.chatId = chat_id;
-    this.fromId = from_id;
-    this.messageId = message_id;
+  constructor({ player }: { player: IPlayer }) {
+    this.player = player;
+    // this.chatId = chat_id;
+    // this.fromId = from_id;
+    // this.messageId = message_id;
     this.sectionSelectedIndex = 0;
   }
 
@@ -62,7 +57,11 @@ export class Shop {
       disable_notification: true,
     };
 
-    this.shopMessage = await bot.sendMessage(this.chatId, await this.getStoreHeaderText(), opts);
+    this.shopMessage = await bot.sendMessage(
+      this.player.private_chat_id,
+      await this.getStoreHeaderText(),
+      opts
+    );
     bot.on("callback_query", this.onCallbackQuery);
   };
 
@@ -87,7 +86,7 @@ export class Shop {
           }
           const cbData = new CallbackData({
             action: CallbackActions.SHOP,
-            telegram_id: this.fromId,
+            telegram_id: this.player.telegram_id,
             payload: itemsFiltered[index]._id,
           });
           const cbDataJson = cbData.toJson();
@@ -104,7 +103,7 @@ export class Shop {
       // NAVIGATION - PREVIOUS PAGE
       let callbackData = new CallbackData({
         action: CallbackActions.SHOP_NAV,
-        telegram_id: this.fromId,
+        telegram_id: this.player.telegram_id,
         payload: CallbackActions.SHOP_NAV_PREV,
       });
       let data = callbackData.toJson();
@@ -116,7 +115,7 @@ export class Shop {
       // NAVIGATION - CLOSE SHOP
       callbackData = new CallbackData({
         action: CallbackActions.SHOP_NAV,
-        telegram_id: this.fromId,
+        telegram_id: this.player.telegram_id,
         payload: CallbackActions.SHOP_NAV_CLOSE,
       });
       data = callbackData.toJson();
@@ -128,7 +127,7 @@ export class Shop {
       // NAVIGATION - NEXT PAGE
       callbackData = new CallbackData({
         action: CallbackActions.SHOP_NAV,
-        telegram_id: this.fromId,
+        telegram_id: this.player.telegram_id,
         payload: CallbackActions.SHOP_NAV_NEXT,
       });
       data = callbackData.toJson();
@@ -161,7 +160,7 @@ export class Shop {
 
         const callbackData = new CallbackData({
           action: CallbackActions.SHOP_BUY,
-          telegram_id: this.fromId,
+          telegram_id: this.player.telegram_id,
           payload: item?._id,
         });
         const buyBtnData = callbackData.toJson();
@@ -169,7 +168,7 @@ export class Shop {
 
         const opts: TelegramBot.EditMessageTextOptions = {
           message_id: this.shopMessage?.message_id,
-          chat_id: this.chatId,
+          chat_id: this.player.private_chat_id,
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [inlineKeyboardBuyBtn, ...this.generateShopLayout()],
@@ -186,29 +185,27 @@ export class Shop {
       }
       // Player clicked BUY button
       case CallbackActions.SHOP_BUY: {
-        const player = await PlayerModel.findOne({
-          telegram_id: data.telegramId,
-          chat_id: this.chatId,
-        });
-
         const itemId = data.payload;
         const item = this.items?.find((itm) => itm._id.toString() === itemId.toString());
 
-        if (item && player) {
-          if (player.money >= item.price) {
-            player.money -= item.price;
+        if (item && this.player) {
+          if (this.player.money >= item.price) {
+            this.player.money -= item.price;
             item._id = new Types.ObjectId();
             item.isNew = true;
-            player.inventory.push(item);
-            player.save();
+            this.player.inventory.push(item);
+            (this.player as IPlayerDocument).saveWithRetries();
 
             const opts: TelegramBot.EditMessageTextOptions = {
               message_id: this.shopMessage?.message_id,
-              chat_id: this.chatId,
+              chat_id: this.player.private_chat_id,
               parse_mode: "HTML",
             };
 
-            bot.editMessageText(`${player?.name} purchased ${item?.name} for ${item?.price}`, opts);
+            bot.editMessageText(
+              `${this.player?.name} purchased ${item?.name} for ${item?.price}`,
+              opts
+            );
             this.cleanUp();
           } else {
             const optsCb: TelegramBot.AnswerCallbackQueryOptions = {
@@ -219,7 +216,7 @@ export class Shop {
             bot.answerCallbackQuery(optsCb);
           }
         } else {
-          logger.warn(`Item [${item}] or player [${player}] is undefined`);
+          logger.warn(`Item [${item}] or player [${this.player}] is undefined`);
           this.cleanUp(true);
         }
 
@@ -232,13 +229,13 @@ export class Shop {
             const telegramId = callbackQuery.from.id;
             const player = await PlayerModel.findOne({
               telegram_id: telegramId,
-              chat_id: this.chatId,
+              chat_id: this.player.chat_id,
             });
 
             if (player) {
               const opts: TelegramBot.EditMessageTextOptions = {
                 message_id: this.shopMessage?.message_id,
-                chat_id: this.chatId,
+                chat_id: this.player.private_chat_id,
                 parse_mode: "HTML",
               };
 
@@ -269,7 +266,7 @@ export class Shop {
 
         const optsEdit: TelegramBot.EditMessageTextOptions = {
           parse_mode: "HTML",
-          chat_id: this.chatId,
+          chat_id: this.player.private_chat_id,
           message_id: this.shopMessage?.message_id,
           reply_markup: {
             inline_keyboard: inlinekeyboard,
@@ -288,16 +285,9 @@ export class Shop {
   };
 
   getStoreHeaderText = async (item?: IItemDocument): Promise<string> => {
-    const player = await PlayerModel.findOne({
-      telegram_id: this.fromId,
-      chat_id: this.chatId,
-    });
-
     const section = SHOP_SECTIONS[this.sectionSelectedIndex];
     let text = `🏪WELCOME TO <b>${SHOP_NAME}</b>🏪\n`;
-    if (player) {
-      text += `<code>Your balance: 💰${player.money.toFixed(2)}</code>\n`;
-    }
+    text += `<code>Your balance: 💰${this.player.money.toFixed(2)}</code>\n`;
     text += `\n▶️<b>${section.toUpperCase()}</b>◀️\n`;
     if (item !== undefined) {
       text += `\n${item.getItemStats({ showPrice: true })}`;
@@ -308,10 +298,8 @@ export class Shop {
 
   cleanUp = (deleteShopMsg: boolean = false) => {
     if (deleteShopMsg && this.shopMessage !== undefined) {
-      bot.deleteMessage(this.chatId, this.shopMessage?.message_id.toString());
+      bot.deleteMessage(this.player.private_chat_id, this.shopMessage?.message_id.toString());
     }
-
-    bot.deleteMessage(this.chatId, this.messageId.toString());
 
     bot.removeListener("callback_query", this.onCallbackQuery);
   };

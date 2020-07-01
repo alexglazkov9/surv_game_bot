@@ -12,9 +12,9 @@ export async function findPlayer(
 
 export async function findPlayerByName(
   this: IPlayerModel,
-  { name, chat_id }: { name: string; chat_id: number }
+  { name }: { name: string }
 ): Promise<IPlayerDocument | null> {
-  const player = await this.findOne({ name, chat_id });
+  const player = await this.findOne({ name });
   return player ?? null;
 }
 

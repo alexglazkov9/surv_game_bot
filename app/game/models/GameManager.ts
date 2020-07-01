@@ -3,9 +3,17 @@ import TelegramBot = require("node-telegram-bot-api");
 import { SessionModel } from "../../database/sessions/sessions.model";
 import { logger } from "../../utils/logger";
 import { PlayerModel } from "../../database/players/players.model";
-import { Shop } from "./Shop";
-import { Inventory } from "./Inventory";
+import { Shop } from "./commands/Shop";
+import { Inventory } from "./commands/Inventory";
 import { sleep } from "../../utils/utils";
+import { CallbackData } from "./CallbackData";
+import { CallbackActions } from "../misc/CallbackConstants";
+import { UserModel } from "../../database/users/users.model";
+import { IPlayerDocument, IPlayer } from "../../database/players/players.types";
+import { BotCommands } from "../misc/BotCommands";
+import { CharacterStats } from "./commands/CharacterStats";
+
+const AUTO_DELETE_DELAY = 5000;
 
 export class GameManager {
   private gameInstances: { [id: number]: GameInstance };
@@ -35,17 +43,25 @@ export class GameManager {
 
     this.bot.onText(/^\/reg ?(.*)/, this.reg);
 
-    this.bot.onText(/^\/character@?[A-z]* ?[A-z0-9]*/, this.character);
+    this.bot.onText(/^\/character@?[A-z]* ?[A-z0-9]*/, (msg) =>
+      this.privateChatCmdHandler(msg, BotCommands.CHARACTER)
+    );
 
-    this.bot.onText(/^\/inventory@?[A-z]*/, this.inventory);
+    this.bot.onText(/^\/inventory@?[A-z]*/, (msg) =>
+      this.privateChatCmdHandler(msg, BotCommands.INVENTORY)
+    );
 
-    this.bot.onText(/\/shop@?[A-z]*/, this.shop);
+    this.bot.onText(/\/shop@?[A-z]*/, (msg) => this.privateChatCmdHandler(msg, BotCommands.SHOP));
+
+    this.bot.onText(/\/help/, this.help);
+
+    this.bot.onText(/\/start/, this.start);
+
+    // ADMIN COMMANDS
 
     this.bot.onText(/\/spawn_enemy/, this.spawnEnemy);
 
     this.bot.onText(/\/respawn/, this.respawn);
-
-    this.bot.onText(/\/help/, this.help);
   };
 
   spawnEnemy = async (msg: TelegramBot.Message) => {
@@ -68,70 +84,189 @@ export class GameManager {
     });
   };
 
-  shop = async (msg: TelegramBot.Message) => {
-    if (msg.from !== undefined) {
-      logger.info(`Shop is being opened for ${msg.from.username} in ${msg.chat.title}`);
-      const shop = new Shop({
-        chat_id: msg.chat.id,
-        from_id: msg.from?.id,
-        message_id: msg.message_id,
-      });
-      shop.display();
-    }
+  requestToStart = async (msg: TelegramBot.Message) => {
+    const opts: TelegramBot.SendMessageOptions = {
+      parse_mode: "HTML",
+    };
+
+    const text = `Start a chat with <a href="tg://user?id=${
+      (await this.bot.getMe()).id
+    }">bot</a> and enter /start`;
+    const message = await this.bot.sendMessage(msg.chat.id, text, opts);
+
+    // Delete message after delay
+    setTimeout(() => {
+      this.bot.deleteMessage(message.chat.id, message.message_id.toString());
+    }, AUTO_DELETE_DELAY);
   };
 
-  inventory = (msg: TelegramBot.Message) => {
-    if (msg.from !== undefined) {
-      const inventory = new Inventory({
-        chat_id: msg.chat.id,
-        from_id: msg.from?.id,
-        message_id: msg.message_id,
-      });
-      inventory.display();
-    }
-  };
+  privateChatCmdHandler = async (msg: TelegramBot.Message, cmd: string) => {
+    let character: IPlayer;
 
-  character = async (msg: TelegramBot.Message) => {
-    const args = msg.text?.split(" ");
-    if (args && args[1] !== undefined) {
-      const player = await PlayerModel.findPlayerByName({ name: args[1], chat_id: msg.chat.id });
-      if (player != null) {
-        player.sendPlayerStats(msg.message_id, msg.from?.id);
-      } else {
-        const opts: TelegramBot.SendMessageOptions = {
-          reply_to_message_id: msg.message_id,
-          parse_mode: "Markdown",
-        };
-        const message = await this.bot.sendMessage(
-          msg.chat.id,
-          // tslint:disable-next-line: prettier
-          "This character doesn't exist",
-          opts
-        );
-        setTimeout(() => {
-          this.bot.deleteMessage(message.chat.id, message.message_id.toString());
-          this.bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-        }, 5000);
+    if (msg.chat.type === "private") {
+      // Message received from private chat
+
+      // Lookup user
+      const user = await UserModel.findOne({ telegram_id: msg.from?.id });
+
+      // Redirect player to private chat if user doesn't exist
+      if (!user) {
+        this.requestToStart(msg);
+        return;
       }
+
+      // Lookup user's deafult character
+      character = await PlayerModel.findPlayer({
+        telegram_id: msg.from?.id,
+        chat_id: user.default_chat_id,
+      });
     } else {
-      const player = await PlayerModel.findPlayer({
+      // Message received from group chat
+
+      // Delete message with command
+      this.bot.deleteMessage(msg.chat.id, msg.message_id.toString());
+
+      // Lookup user's deafult character
+      character = await PlayerModel.findPlayer({
         telegram_id: msg.from?.id,
         chat_id: msg.chat.id,
       });
-      if (player != null) {
-        player.sendPlayerStats(msg.message_id);
-      } else {
-        const opts: TelegramBot.SendMessageOptions = {
-          reply_to_message_id: msg.message_id,
-          parse_mode: "Markdown",
-        };
-        const message = await this.bot.sendMessage(msg.chat.id, "You don't have a character", opts);
-        setTimeout(async () => {
-          this.bot.deleteMessage(message.chat.id, message.message_id.toString());
-          this.bot.deleteMessage(msg.chat.id, msg.message_id.toString());
-        }, 5000);
+
+      if (character && character.private_chat_id === undefined) {
+        this.requestToStart(msg);
+        return;
       }
     }
+
+    switch (cmd) {
+      case BotCommands.SHOP: {
+        this.shop(character);
+        break;
+      }
+      case BotCommands.INVENTORY: {
+        this.inventory(character);
+        break;
+      }
+      case BotCommands.CHARACTER: {
+        const args = msg.text?.split(" ");
+        if (args && args[1] !== undefined) {
+          // Inspecting other character
+          const inspectedCharacter = await PlayerModel.findPlayerByName({ name: args[1] });
+          if (inspectedCharacter != null) {
+            this.character(inspectedCharacter, character);
+          } else {
+            const opts: TelegramBot.SendMessageOptions = {
+              parse_mode: "HTML",
+            };
+            const message = await this.bot.sendMessage(
+              character.private_chat_id,
+              `Character with the name '${args[1]}' doesn't exist`,
+              opts
+            );
+          }
+        } else {
+          // Inspecting self
+          this.character(character);
+        }
+        break;
+      }
+    }
+  };
+
+  start = async (msg: TelegramBot.Message) => {
+    if (msg.chat.type === "private") {
+      const inlineKeyboard: TelegramBot.InlineKeyboardButton[][] = [];
+      let row = 0;
+      let index = 0;
+
+      // Links private chat id to player's characters
+      const characters = await PlayerModel.find({ telegram_id: msg.from?.id });
+      for (const character of characters) {
+        character.private_chat_id = msg.chat.id;
+        await character.saveWithRetries();
+
+        const cbData = new CallbackData({
+          action: CallbackActions.START_CHARACTER_PICKED,
+          telegram_id: msg.from?.id,
+          payload: character.name,
+        });
+        const cbDataJson = cbData.toJson();
+        if (inlineKeyboard[row] === undefined) {
+          inlineKeyboard[row] = [];
+        }
+        inlineKeyboard[row].push({
+          text: `${character.name} - ${character.level} lvl`,
+          callback_data: cbDataJson,
+        });
+        index++;
+        if (index % 2 === 0) {
+          row++;
+        }
+      }
+
+      const text = "What character do you want to set as default?\n";
+      const opts: TelegramBot.SendMessageOptions = {
+        reply_markup: {
+          inline_keyboard: inlineKeyboard,
+        },
+      };
+      const message = await this.bot.sendMessage(msg.chat.id, text, opts);
+
+      const onQueryCallback = async (callbackQuery: TelegramBot.CallbackQuery) => {
+        const data = CallbackData.fromJson(callbackQuery.data);
+
+        if (
+          message.message_id !== callbackQuery.message?.message_id ||
+          data.telegramId !== callbackQuery.from.id
+        ) {
+          return;
+        }
+
+        const characterName = data.payload;
+        switch (data.action) {
+          // Player clicked on any item
+          case CallbackActions.START_CHARACTER_PICKED: {
+            const character = await PlayerModel.findPlayerByName({ name: characterName });
+            if (character) {
+              await UserModel.createOrUpdateUser(data.telegramId, character.chat_id);
+            }
+            break;
+          }
+        }
+
+        const optsEdit: TelegramBot.EditMessageTextOptions = {
+          chat_id: message.chat.id,
+          message_id: message.message_id,
+          parse_mode: "HTML",
+        };
+        this.bot.editMessageText(
+          `<b>${characterName}</b> has been selected as your default character! /start to select another one`,
+          optsEdit
+        );
+
+        this.bot.removeListener("callback_query", onQueryCallback);
+      };
+
+      this.bot.on("callback_query", onQueryCallback);
+    }
+  };
+
+  shop = async (character: IPlayer) => {
+    const shop = new Shop({ player: character });
+    shop.display();
+  };
+
+  inventory = (character: IPlayer) => {
+    const inventory = new Inventory({
+      character,
+    });
+    inventory.display();
+  };
+
+  character = async (character: IPlayer, sendTo?: IPlayer) => {
+    const characterStats = new CharacterStats({ character, sendTo });
+    characterStats.send();
+    return;
   };
 
   reg = async (msg: TelegramBot.Message, match: RegExpExecArray | null) => {

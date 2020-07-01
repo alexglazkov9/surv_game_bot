@@ -1,6 +1,6 @@
 import TelegramBot = require("node-telegram-bot-api");
 import { PlayerModel } from "../../database/players/players.model";
-import { Enemy, ON_DEATH_EVENT } from "./Enemy";
+import { Enemy, ON_DEATH_EVENT } from "./units/Enemy";
 import { logger } from "../../utils/logger";
 
 import enemies = require("../../database/enemies/enemies.json");

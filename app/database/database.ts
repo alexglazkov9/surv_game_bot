@@ -4,6 +4,9 @@ import { logger } from "../utils/logger";
 let database: Mongoose.Connection;
 
 export const connect = () => {
+  if (process.env.MONGO_URI === undefined && process.env.MONGO_URI_TEST === undefined) {
+    logger.error("Database connection string is not set");
+  }
   let uri: string;
   if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "local_prod") {
     uri = process.env.MONGO_URI ?? "";
@@ -35,15 +38,6 @@ export const connect = () => {
   database.on("error", () => {
     logger.error("Error connecting to database");
   });
-
-  // return {
-  //   PlayerModel,
-  //   SessionModel,
-  //   ItemModel,
-  //   WeaponModel,
-  //   ArmorModel,
-  //   ConsumableModel,
-  // };
 };
 
 export const disconnect = () => {
