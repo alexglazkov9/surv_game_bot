@@ -180,18 +180,18 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
       });
 
       if (player !== undefined) {
-        if (
-          Math.abs(player.level - this.getAverageLevel(SIDE.B)) >
-          GameParams.ALLOWED_LEVEL_DIFFERENCE
-        ) {
-          const optsCall: TelegramBot.AnswerCallbackQueryOptions = {
-            callback_query_id: callbackQuery.id,
-            text: "Level difference must be 5 or less",
-            show_alert: false,
-          };
-          this.bot.answerCallbackQuery(optsCall);
-          return;
-        }
+        // if (
+        //   Math.abs(player.level - this.getAverageLevel(SIDE.B)) >
+        //   GameParams.ALLOWED_LEVEL_DIFFERENCE
+        // ) {
+        //   const optsCall: TelegramBot.AnswerCallbackQueryOptions = {
+        //     callback_query_id: callbackQuery.id,
+        //     text: "Level difference must be 5 or less",
+        //     show_alert: false,
+        //   };
+        //   this.bot.answerCallbackQuery(optsCall);
+        //   return;
+        // }
         if (
           this.teamA.findIndex((unit) => {
             return (
