@@ -41,6 +41,17 @@ import {
   getArmor,
   gainHP,
   getLatest,
+  getMaxHP,
+  getStamina,
+  getAgility,
+  getStrength,
+  getDamage,
+  getCritChance,
+  getDodgeChance,
+  getArmorReduction,
+  getAttackSpeedDelay,
+  getAllEquipment,
+  isItemEquiped,
 } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
 
@@ -49,17 +60,70 @@ const PlayerSchema = new Schema({
   chat_id: Number,
   private_chat_id: Number,
   name: String,
-  health_points_max: { type: Number, default: 10 },
+  // health_points_max: { type: Number, default: 10 },
   health_points: { type: Number, default: 10 },
-  armor_max: { type: Number, default: 0 },
-  armor: { type: Number, default: 0 },
+
+  // Main stats
+  stamina: { type: Number, default: 5 },
+  strength: { type: Number, default: 5 },
+  agility: { type: Number, default: 5 },
+  // action_points: { type: Number, default: 10 },
+  // ap_gain_rate: { type: Number, default: 1 },
+
+  // Character progression
   level: { type: Number, default: 1 },
   experience: { type: Number, default: 0 },
-  action_points: { type: Number, default: 10 },
-  ap_gain_rate: { type: Number, default: 1 },
+  stat_points: { type: Number, default: 0 },
+
+  // Character possesions
   money: { type: Number, default: 0 },
   inventory: {
     type: [ItemSchema],
+  },
+  equipment: {
+    armor: {
+      head: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      necklace: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+
+      rings: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      body: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      hands: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      legs: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      feet: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+    },
+    weapon: {
+      type: Schema.Types.ObjectId,
+      default: null,
+      // ref: "player.inventory",
+    },
   },
   equiped_armor: {
     type: Schema.Types.ObjectId,
@@ -95,6 +159,21 @@ PlayerSchema.statics.isNameTaken = isNameTaken;
 PlayerSchema.statics.getAllFromChat = getAllFromChat;
 PlayerSchema.statics.getAll = getAll;
 PlayerSchema.statics.getRandomMinMaxLvl = getRandomMinMaxLvl;
+
+// Stats
+PlayerSchema.methods.getStamina = getStamina;
+PlayerSchema.methods.getAgility = getAgility;
+PlayerSchema.methods.getStrength = getStrength;
+PlayerSchema.methods.getDamage = getDamage;
+PlayerSchema.methods.getCritChance = getCritChance;
+PlayerSchema.methods.getDodgeChance = getDodgeChance;
+PlayerSchema.methods.getMaxHP = getMaxHP;
+PlayerSchema.methods.getArmorReduction = getArmorReduction;
+PlayerSchema.methods.getAttackSpeedDelay = getAttackSpeedDelay;
+
+// Misc
+PlayerSchema.methods.getAllEquipment = getAllEquipment;
+PlayerSchema.methods.isItemEquiped = isItemEquiped;
 
 PlayerSchema.methods.getPlayerStats = getPlayerStats;
 PlayerSchema.methods.getMinStats = getMinStats;

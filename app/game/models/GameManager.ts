@@ -101,7 +101,7 @@ export class GameManager {
   };
 
   privateChatCmdHandler = async (msg: TelegramBot.Message, cmd: string) => {
-    let character: IPlayer;
+    let character: IPlayerDocument;
 
     if (msg.chat.type === "private") {
       // Message received from private chat
@@ -256,7 +256,7 @@ export class GameManager {
     shop.display();
   };
 
-  inventory = (character: IPlayer) => {
+  inventory = (character: IPlayerDocument) => {
     const inventory = new Inventory({
       character,
     });

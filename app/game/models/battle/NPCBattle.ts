@@ -424,13 +424,13 @@ export class NPCBattle extends EventEmitter.EventEmitter implements IBattleGroun
       this.battleLog.expMoneyDropped(unitsRewarded, expPerUnit, moneyPerUnit);
     }
 
-    const itemDrop = unitKilled.itemDrop;
+    const itemDrop = await unitKilled.getDropItem();
 
     if (itemDrop) {
       const rndUnit = this.getRandomUnit(SIDE.A, true);
       await (rndUnit as IPlayerDocument).addItemToInventory(itemDrop);
       await (rndUnit as IPlayerDocument).saveWithRetries();
-      this.battleLog.itemDropped(rndUnit, itemDrop);
+      this.battleLog.itemDropped(rndUnit, itemDrop.name);
     }
   };
 }

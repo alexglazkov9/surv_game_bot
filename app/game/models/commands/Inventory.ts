@@ -5,6 +5,7 @@ import {
   IArmor,
   IConsumable,
   IConsumableDocument,
+  IWeaponDocument,
 } from "../../../database/items/items.types";
 import { IPlayerDocument, IPlayer } from "../../../database/players/players.types";
 import { bot } from "../../../app";
@@ -13,6 +14,7 @@ import { CallbackActions } from "../../misc/CallbackConstants";
 import { CallbackData } from "../CallbackData";
 import { ItemType } from "../../misc/ItemType";
 import { PlayerModel } from "../../../database/players/players.model";
+import { ArmorTypes } from "../../misc/ArmorTypes";
 
 // Number of columns in the inventory
 const COL_NUM = 2;
@@ -21,18 +23,18 @@ const USE_BTN_TXT = "USE";
 const EQUIP_BTN_TXT = "EQUIP";
 
 export class Inventory {
-  character: IPlayer;
+  character: IPlayerDocument;
   // chatId: number;
   // fromId: number;
   // messageId: number;
   inventoryMessage?: TelegramBot.Message;
   items: IItemDocument[] | undefined;
-  player: IPlayerDocument | undefined;
+  // player: IPlayerDocument | undefined;
   sectionSelectedIndex: number;
   previousMsgText?: string;
   previousOpts?: any;
 
-  constructor({ character }: { character: IPlayer }) {
+  constructor({ character }: { character: IPlayerDocument }) {
     this.character = character;
     // this.chatId = chat_id;
     // this.fromId = from_id;
@@ -40,23 +42,23 @@ export class Inventory {
     this.sectionSelectedIndex = 0;
   }
 
-  pullPlayer = async () => {
-    // Pull all items to be displayed in the shop
-    try {
-      this.player = await PlayerModel.findPlayer({
-        telegram_id: this.character.telegram_id,
-        chat_id: this.character.chat_id,
-      });
-    } catch (e) {
-      logger.error(e);
-    }
-  };
+  // pullPlayer = async () => {
+  //   // Pull all items to be displayed in the shop
+  //   try {
+  //     this.player = await PlayerModel.findPlayer({
+  //       telegram_id: this.character.telegram_id,
+  //       chat_id: this.character.chat_id,
+  //     });
+  //   } catch (e) {
+  //     logger.error(e);
+  //   }
+  // };
 
   display = async () => {
     // Pull items from db if have not been pulled yet
-    if (this.player === undefined) {
-      await this.pullPlayer();
-    }
+    // if (this.player === undefined) {
+    //   await this.pullPlayer();
+    // }
 
     const opts: TelegramBot.SendMessageOptions = {
       parse_mode: "HTML",
@@ -75,12 +77,12 @@ export class Inventory {
   };
 
   generateLayout = (): TelegramBot.InlineKeyboardButton[][] => {
-    const inlinekeyboard: TelegramBot.InlineKeyboardButton[][] = [];
-    const inlineKeyboardNav: TelegramBot.InlineKeyboardButton[] = [];
+    const itemKeyboard: TelegramBot.InlineKeyboardButton[][] = [];
+    const navigationKeyboard: TelegramBot.InlineKeyboardButton[] = [];
 
-    if (this.player !== undefined) {
+    if (this.character !== undefined) {
       // Filter items by ItemType to display in different sections
-      const itemsFiltered = this.player.inventory.filter(
+      const itemsFiltered = this.character.inventory.filter(
         (item) => item.__t === INVENTORY_SECTIONS[this.sectionSelectedIndex]
       );
 
@@ -91,8 +93,8 @@ export class Inventory {
         // Generate listings for items
         for (row = 0; row < itemsFiltered?.length && index < itemsFiltered?.length; row++) {
           for (let k = 0; k < COL_NUM && index < itemsFiltered?.length; k++) {
-            if (!inlinekeyboard[row]) {
-              inlinekeyboard[row] = [];
+            if (!itemKeyboard[row]) {
+              itemKeyboard[row] = [];
             }
 
             const item = itemsFiltered[index];
@@ -101,15 +103,47 @@ export class Inventory {
 
             // Mark equipped items
             if (INVENTORY_SECTIONS[this.sectionSelectedIndex] === ItemType.WEAPON) {
-              equipedItem = this.player.equiped_weapon;
-              btnTxt = `${equipedItem?._id.toString() === item._id.toString() ? "🟢" : ""} ${
+              equipedItem = this.character.getEquipedWeapon() as IWeaponDocument;
+
+              btnTxt = `${equipedItem?._id.toString() === item._id.toString() ? "✋" : ""} ${
                 item.name
-              } (${(item as IWeapon).durability})`;
+              } (${(item as IWeapon).quality})`;
             } else if (INVENTORY_SECTIONS[this.sectionSelectedIndex] === ItemType.ARMOR) {
-              equipedItem = this.player.equiped_armor;
-              btnTxt = `${equipedItem?._id.toString() === item._id.toString() ? "🟢" : ""} ${
-                item.name
-              } (${(item as IArmor).durability})`;
+              btnTxt = `${item.name} (${(item as IArmor).durability})`;
+
+              // Adds emoji tp indicate equipped items
+              if (this.character.isItemEquiped(item._id)) {
+                switch ((item as IArmor).type) {
+                  case ArmorTypes.HEAD: {
+                    btnTxt = `⛑${btnTxt}`;
+                    break;
+                  }
+                  case ArmorTypes.RINGS: {
+                    btnTxt = `💍${btnTxt}`;
+                    break;
+                  }
+                  case ArmorTypes.NECKLACE: {
+                    btnTxt = `⛓${btnTxt}`;
+                    break;
+                  }
+                  case ArmorTypes.BODY: {
+                    btnTxt = `🦺${btnTxt}`;
+                    break;
+                  }
+                  case ArmorTypes.LEGS: {
+                    btnTxt = `👖${btnTxt}`;
+                    break;
+                  }
+                  case ArmorTypes.HANDS: {
+                    btnTxt = `🧤${btnTxt}`;
+                    break;
+                  }
+                  case ArmorTypes.FEET: {
+                    btnTxt = `👟${btnTxt}`;
+                    break;
+                  }
+                }
+              }
             } else if (INVENTORY_SECTIONS[this.sectionSelectedIndex] === ItemType.CONSUMABLE) {
               btnTxt = `${item.name} (${(item as IConsumable).charges})`;
             }
@@ -120,7 +154,7 @@ export class Inventory {
               payload: itemsFiltered[index]._id,
             });
             const cbDataJson = cbData.toJson();
-            inlinekeyboard[row].push({
+            itemKeyboard[row].push({
               text: btnTxt,
               callback_data: cbDataJson,
             });
@@ -129,7 +163,7 @@ export class Inventory {
         }
       } else {
         const emptyCbData = CallbackData.createEmpty();
-        inlinekeyboard[row] = [
+        itemKeyboard[row] = [
           {
             text: `SO EMPTY... WOW`,
             callback_data: emptyCbData.toJson(),
@@ -146,7 +180,7 @@ export class Inventory {
         payload: CallbackActions.INVENTORY_NAV_PREV,
       });
       let data = callbackData.toJson();
-      inlineKeyboardNav.push({
+      navigationKeyboard.push({
         text: "⏪Prev",
         callback_data: data,
       });
@@ -158,7 +192,7 @@ export class Inventory {
         payload: CallbackActions.INVENTORY_NAV_CLOSE,
       });
       data = callbackData.toJson();
-      inlineKeyboardNav.push({
+      navigationKeyboard.push({
         text: "❌CLOSE",
         callback_data: data,
       });
@@ -170,13 +204,13 @@ export class Inventory {
         payload: CallbackActions.INVENTORY_NAV_NEXT,
       });
       data = callbackData.toJson();
-      inlineKeyboardNav.push({
+      navigationKeyboard.push({
         text: "Next⏩",
         callback_data: data,
       });
     }
 
-    return [inlineKeyboardNav, ...inlinekeyboard];
+    return [navigationKeyboard, ...itemKeyboard];
   };
 
   onCallbackQuery = async (callbackQuery: TelegramBot.CallbackQuery) => {
@@ -212,8 +246,8 @@ export class Inventory {
           },
         ];
 
-        if (this.player) {
-          this.player.inventory.forEach(async (item) => {
+        if (this.character) {
+          this.character.inventory.forEach(async (item) => {
             if (item._id.toString() === itemId) {
               itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
             }
@@ -240,48 +274,83 @@ export class Inventory {
       }
       // Player clicked USE/EQUIP
       case CallbackActions.INVENTORY_USE: {
+        // Selected item's id
         const itemId = data.payload;
 
         switch (selectedSection) {
           case ItemType.WEAPON: {
-            if (this.player) {
-              this.player.inventory.forEach(async (item) => {
+            if (this.character) {
+              this.character.inventory.forEach(async (item) => {
                 if (item._id.toString() === itemId) {
                   itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
-                  if (this.player?.equiped_weapon?.toString() === item._id.toString()) {
-                    if (this.player !== undefined) this.player.equiped_weapon = null;
+                  if (this.character.equipment.weapon?._id.toString() === item._id.toString()) {
+                    if (this.character !== undefined) this.character.equipment.weapon = null;
                   } else {
-                    if (this.player !== undefined) this.player.equiped_weapon = item._id;
+                    if (this.character !== undefined) {
+                      this.character.equipment.weapon = item._id;
+                    }
                   }
-                  await this.player?.saveWithRetries();
+
+                  await (this.character as IPlayerDocument)?.saveWithRetries();
                 }
               });
             }
             break;
           }
           case ItemType.ARMOR: {
-            if (this.player) {
-              this.player.inventory.forEach(async (item) => {
-                if (item._id.toString() === itemId) {
-                  itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
-                  if (this.player?.equiped_armor?.toString() === item._id.toString()) {
-                    if (this.player !== undefined) this.player.equiped_armor = null;
-                  } else {
-                    if (this.player !== undefined) this.player.equiped_armor = item._id;
+            this.character.inventory.forEach(async (item) => {
+              if (item._id.toString() === itemId) {
+                logger.debug("Found");
+                itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
+
+                const isEquipped = this.character.isItemEquiped(item._id);
+
+                logger.debug("isEquipped " + isEquipped);
+                logger.debug("type " + (item as IArmor).type);
+                switch ((item as IArmor).type) {
+                  case ArmorTypes.HEAD: {
+                    this.character.equipment.armor.head = isEquipped ? null : item._id;
+                    break;
                   }
-                  await this.player?.saveWithRetries();
+                  case ArmorTypes.RINGS: {
+                    this.character.equipment.armor.rings = isEquipped ? null : item._id;
+                    break;
+                  }
+                  case ArmorTypes.NECKLACE: {
+                    this.character.equipment.armor.necklace = isEquipped ? null : item._id;
+                    break;
+                  }
+                  case ArmorTypes.BODY: {
+                    this.character.equipment.armor.body = isEquipped ? null : item._id;
+                    break;
+                  }
+                  case ArmorTypes.LEGS: {
+                    this.character.equipment.armor.legs = isEquipped ? null : item._id;
+                    break;
+                  }
+                  case ArmorTypes.HANDS: {
+                    this.character.equipment.armor.hands = isEquipped ? null : item._id;
+                    break;
+                  }
+                  case ArmorTypes.FEET: {
+                    this.character.equipment.armor.feet = isEquipped ? null : item._id;
+                    break;
+                  }
                 }
-              });
-            }
+                logger.debug(this.character.equipment.armor.feet);
+                await (this.character as IPlayerDocument)?.saveWithRetries();
+              }
+            });
+
             break;
           }
           case ItemType.CONSUMABLE: {
-            if (this.player?.isAlive()) {
-              this.player.inventory.forEach(async (item) => {
+            if ((this.character as IPlayerDocument)?.isAlive()) {
+              this.character.inventory.forEach(async (item) => {
                 if (item._id.toString() === itemId) {
                   itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
-                  if (this.player) {
-                    (item as IConsumableDocument).onConsume(this.player);
+                  if (this.character) {
+                    (item as IConsumableDocument).onConsume(this.character as IPlayerDocument);
                   }
                 }
               });
@@ -361,7 +430,7 @@ export class Inventory {
   getHeaderText = (): string => {
     const section = INVENTORY_SECTIONS[this.sectionSelectedIndex];
     let text = `<pre>    </pre>▶️<b>${section.toUpperCase()}</b>◀️\n\n`;
-    text += `${this.player?.getShortStats()}\n`;
+    text += `${(this.character as IPlayerDocument)?.getShortStats()}\n`;
     return text;
   };
 

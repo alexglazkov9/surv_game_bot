@@ -10,13 +10,39 @@ export interface IItem {
 
 export interface IWeapon extends IItem {
   damage: number;
+  base_attack_speed: number;
+
+  quality: number;
+
+  // Stats
+  stamina: number;
+  strength: number;
+  agility: number;
+
+  attack_speed: number;
+  crit_chance: number;
+  dodge_chance: number;
+
+  // DEPRECATED
   durability: number;
   ap_cost: number;
-  attack_speed: number;
 }
 
 export interface IArmor extends IItem {
   armor: number;
+  type: string;
+  quality: number;
+
+  // Stats
+  stamina: number;
+  strength: number;
+  agility: number;
+
+  attack_speed: number;
+  crit_chance: number;
+  dodge_chance: number;
+
+  // DEPRECATED
   durability: number;
 }
 

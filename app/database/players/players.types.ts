@@ -1,5 +1,5 @@
 import { Document, Model } from "mongoose";
-import { IItem, IWeapon, IArmor } from "../items/items.types";
+import { IItem, IWeapon, IArmor, IItemDocument } from "../items/items.types";
 import { Enemy } from "../../game/models/units/Enemy";
 import { IUnit } from "../../game/models/units/IUnit";
 
@@ -8,21 +8,55 @@ export interface IPlayer {
   chat_id: number;
   private_chat_id: number;
   name: string;
-  health_points_max: number;
+
   health_points: number;
-  armor_max: number;
-  armor: number;
+
+  // Main stats
+  stamina: number;
+  strength: number;
+  agility: number;
+  // action_points: { type: Number, default: 10 },
+  // ap_gain_rate: { type: Number, default: 1 },
+
+  // Character progression
   level: number;
   experience: number;
-  action_points: number;
-  ap_gain_rate: number;
+  stat_points: number;
+
+  // Character possesions
   money: number;
   inventory: IItem[];
-  equiped_armor: IItem | null;
-  equiped_weapon: IItem | null;
+  equipment: {
+    armor: {
+      head: IItem | null;
+      necklace: IItem | null;
+      rings: IItem | null;
+      body: IItem | null;
+      hands: IItem | null;
+      legs: IItem | null;
+      feet: IItem | null;
+    };
+    weapon: IItem | null;
+  };
+  //equiped_armor: IItem | null;
+  //equiped_weapon: IItem | null;
 }
 
 export interface IPlayerDocument extends IPlayer, Document, IUnit {
+  // Stats
+  getStamina: (this: IPlayerDocument) => number;
+  getAgility: (this: IPlayerDocument) => number;
+  getStrength: (this: IPlayerDocument) => number;
+  getMaxHP: (this: IPlayerDocument) => number;
+  getDamage: (this: IPlayerDocument) => number;
+  getCritChance: (this: IPlayerDocument) => number;
+  getDodgeChance: (this: IPlayerDocument) => number;
+  getArmorReduction: (this: IPlayerDocument) => number;
+  getAttackSpeedDelay: (this: IPlayerDocument) => number;
+
+  getAllEquipment: (this: IPlayerDocument) => IArmor[];
+  isItemEquiped: (this: IPlayerDocument, id: number) => boolean;
+
   getPlayerStats: (this: IPlayerDocument) => string;
   getMinStats: (this: IPlayerDocument) => string;
   getShortStats: (this: IPlayerDocument, isDead?: boolean) => string;
@@ -42,7 +76,7 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   getEquipedWeapon: (this: IPlayerDocument) => IWeapon | null;
   getEquipedArmor: (this: IPlayerDocument) => IArmor | null;
   getAttackSpeed: (this: IPlayerDocument) => number;
-  addItemToInventory: (this: IPlayerDocument, itemName: string) => Promise<void>;
+  addItemToInventory: (this: IPlayerDocument, item: IItemDocument) => Promise<void>;
   gainXP: (this: IPlayerDocument, amount: number) => void;
   gainHP: (this: IPlayerDocument, amount: number, opts?: { isPercentage?: boolean }) => void;
   saveWithRetries: (this: IPlayerDocument) => Promise<void>;

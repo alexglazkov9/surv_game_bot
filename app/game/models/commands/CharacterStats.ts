@@ -39,7 +39,7 @@ export class CharacterStats {
 
     const messageSent = await bot.sendMessage(
       this.sendTo.private_chat_id,
-      (this.character as IPlayerDocument).getPlayerStats(),
+      this.getStatsFormatted(),
       opts
     );
 
@@ -66,5 +66,36 @@ export class CharacterStats {
     };
 
     bot.on("callback_query", onCallbackQuery);
+  };
+
+  getStatsFormatted = () => {
+    const characterDoc = this.character as IPlayerDocument;
+    const equipedWeapon = characterDoc.getEquipedWeapon();
+    const equipedArmor = characterDoc.getEquipedArmor();
+
+    const statsString = `<b>${characterDoc.name}</b> - ${characterDoc.level} lvl ${
+      this.character.health_points <= 0 ? "💀DEAD💀" : ""
+    }\n
+     💚HP: ${characterDoc.health_points.toFixed(1)}\\${characterDoc.getMaxHP().toFixed(1)}
+     🗡Damage: ${characterDoc.getDamage().toFixed(0)}
+     🛡Armor: ${characterDoc.getArmor().toFixed(0)}
+
+     ❇Exp: ${characterDoc.experience.toFixed(1)}\\${characterDoc.getExpCap().toFixed(0)}
+
+     Stamina: ${characterDoc.getStamina().toFixed(0)}
+     Agility: ${characterDoc.getAgility().toFixed(0)}
+     Strength: ${characterDoc.getStrength()}
+
+     Crit Chance: ${(characterDoc.getCritChance() * 100).toFixed(2)}%
+     Dodge Chance: ${(characterDoc.getDodgeChance() * 100).toFixed(2)}%
+     Attack Speed: ${characterDoc.getAttackSpeed().toFixed(0)}
+
+     💰Cash: ${characterDoc.money.toFixed(2)}
+
+     <b>Items equiped</b>
+     Armor: 
+     Weapon: 
+    `;
+    return statsString;
   };
 }
