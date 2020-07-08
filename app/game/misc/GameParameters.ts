@@ -4,6 +4,8 @@ export class GameParams {
   // PROGRESSION
   static STAT_POINTS_PER_LVL = 5;
   static MAX_LEVEL_CHARACTER = 30;
+  static BASE_EXP_CHARACTER = 10;
+  static EXP_GROWTH_FACTOR = 30;
 
   // STATS
   static PLAYER_BASE_DAMAGE = 1;

@@ -294,7 +294,7 @@ export function takeDamage(this: IPlayerDocument, dmg: number): number {
 }
 
 export function getExpCap(this: IPlayerDocument): number {
-  return this.level * 2 + 10 - 2;
+  return GameParams.BASE_EXP_CHARACTER + GameParams.EXP_GROWTH_FACTOR * (this.level - 1);
 }
 
 export function getHitDamage(this: IPlayerDocument): number {
