@@ -76,12 +76,12 @@ const PlayerSchema = new Schema({
   stat_points: { type: Number, default: 5 },
   statistics: {
     duels: {
-      won: { type: Number, deafult: 0 },
+      won: { type: Number, deafault: 0 },
       lost: { type: Number, default: 0 },
     },
     pve: {
       battles: { type: Number, default: 0 },
-      last_hits: { type: Number, deafult: 0 },
+      last_hits: { type: Number, deafault: 0 },
     },
   },
 
