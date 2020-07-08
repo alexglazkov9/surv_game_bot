@@ -102,7 +102,7 @@ export class CharacterStats {
   generateLayout = () => {
     // Generating buttons
     const inlineKeyboardStats: TelegramBot.InlineKeyboardButton[] = [];
-    if (this.character.stat_points > 0) {
+    if (this.character.telegram_id === this.sendTo.telegram_id && this.character.stat_points > 0) {
       let cbStatData = new CallbackData({
         action: CallbackActions.PLAYER_STAT_SPEND,
         telegram_id: this.sendTo.telegram_id,
