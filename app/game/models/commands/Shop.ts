@@ -7,8 +7,9 @@ import { logger } from "../../../utils/logger";
 import { Types } from "mongoose";
 import { ItemType } from "../../misc/ItemType";
 import { PlayerModel } from "../../../database/players/players.model";
-import { ItemModel } from "../../../database/items/items.model";
+import { ItemModel, ShopItemModel } from "../../../database/items/items.model";
 import { IPlayer, IPlayerDocument } from "../../../database/players/players.types";
+import { IndicatorsEmojis } from "../../misc/IndicatorsEmojis";
 
 // Number of columns in the shop
 const COL_NUM = 2;
@@ -18,9 +19,6 @@ const SHOP_BUY_BTN_TXT = "💲BUY💲";
 
 export class Shop {
   player: IPlayer;
-  // chatId: number;
-  // fromId: number;
-  // messageId: number;
   shopMessage?: TelegramBot.Message;
   items: IItemDocument[] | undefined;
   sectionSelectedIndex: number;
@@ -28,16 +26,13 @@ export class Shop {
 
   constructor({ player }: { player: IPlayer }) {
     this.player = player;
-    // this.chatId = chat_id;
-    // this.fromId = from_id;
-    // this.messageId = message_id;
     this.sectionSelectedIndex = 0;
   }
 
   pullItems = async () => {
     // Pull all items to be displayed in the shop
     try {
-      this.items = await ItemModel.find({});
+      this.items = await ShopItemModel.find({});
     } catch (e) {
       logger.error(e);
     }
@@ -287,8 +282,10 @@ export class Shop {
   getStoreHeaderText = async (item?: IItemDocument): Promise<string> => {
     const section = SHOP_SECTIONS[this.sectionSelectedIndex];
     let text = `🏪WELCOME TO <b>${SHOP_NAME}</b>🏪\n`;
-    text += `<code>Your balance: 💰${this.player.money.toFixed(2)}</code>\n`;
-    text += `\n▶️<b>${section.toUpperCase()}</b>◀️\n`;
+    text += `<code>Your balance: ${this.player.money.toFixed(2)} <b>${
+      IndicatorsEmojis.CURRENCY_MONEY
+    }</b></code>\n`;
+    text += `\n▶️▶️▶️<b>${section.toUpperCase()}</b>◀️◀️◀️\n`;
     if (item !== undefined) {
       text += `\n${item.getItemStats({ showPrice: true })}`;
     }

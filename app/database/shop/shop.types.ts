@@ -23,7 +23,9 @@ export interface IWeapon extends IItem {
   crit_chance: number;
   dodge_chance: number;
 
-  min_lvl: number;
+  // DEPRECATED
+  durability: number;
+  ap_cost: number;
 }
 
 export interface IArmor extends IItem {
@@ -40,7 +42,8 @@ export interface IArmor extends IItem {
   crit_chance: number;
   dodge_chance: number;
 
-  min_lvl: number;
+  // DEPRECATED
+  durability: number;
 }
 
 export interface IConsumableEffect {
@@ -54,10 +57,7 @@ export interface IConsumable extends IItem {
 }
 
 export interface IItemDocument extends IItem, Document {
-  getItemStats: (
-    this: IItemDocument,
-    options?: { showPrice?: boolean; showSellPrice?: boolean }
-  ) => string;
+  getItemStats: (this: IItemDocument, options?: { showPrice?: boolean }) => string;
 }
 
 export interface IItemModel extends Model<IItemDocument> {}

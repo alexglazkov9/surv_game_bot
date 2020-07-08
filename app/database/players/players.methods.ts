@@ -1,36 +1,19 @@
 import { IPlayerDocument } from "./players.types";
-import { bot, db } from "../../app";
+import { bot } from "../../app";
 import TelegramBot = require("node-telegram-bot-api");
 import { IWeaponDocument, IWeapon, IArmor, IItemDocument, IItem } from "../items/items.types";
 import { Types } from "mongoose";
 import { logger } from "../../utils/logger";
-import { Enemy } from "../../game/models/units/Enemy";
-import { CallbackData } from "../../game/models/CallbackData";
 import { IUnit } from "../../game/models/units/IUnit";
 import { BattleEvents } from "../../game/models/battle/BattleEvents";
-import { ItemModel } from "../items/items.model";
 import { PlayerModel } from "./players.model";
 import { GameParams } from "../../game/misc/GameParameters";
-import { ItemType } from "../../game/misc/ItemType";
 
 const DEFAULT_ATTACK_SPEED = 5000;
 
-export function getPlayerStats(this: IPlayerDocument): string {
-  const equipedWeapon = this.getEquipedWeapon();
-  const equipedArmor = this.getEquipedArmor();
-  const statsString = `<b>${this.name}</b> - ${this.level} lvl ${
-    this.health_points <= 0 ? "💀DEAD💀" : ""
-  }\n
-     💚HP: ${this.health_points.toFixed(1)}\\${this.getMaxHP().toFixed(1)}
-     🛡Armor: ${equipedArmor ? `<b>${equipedArmor.armor}</b>(${equipedArmor.durability})` : "0(0)"}
-     🗡Damage: ${
-       equipedWeapon ? `<b>${equipedWeapon.damage}</b>(${equipedWeapon.durability})` : "1(∞)"
-     }
-     ❇Exp: ${this.experience.toFixed(1)}\\${this.getExpCap().toFixed(0)}
-     💰Cash: ${this.money.toFixed(2)}
-    `;
-  return statsString;
-}
+/*
+    CHARACTER STATS METHODS
+*/
 
 export function getStamina(this: IPlayerDocument): number {
   let stamina = 0;
@@ -46,7 +29,6 @@ export function getStamina(this: IPlayerDocument): number {
   // Add armor's stamina
   const armors = this.getAllEquipment();
   armors.forEach((armor) => {
-    logger.debug("item " + armor.stamina);
     stamina += armor.stamina;
   });
 
@@ -94,7 +76,13 @@ export function getAgility(this: IPlayerDocument): number {
 }
 
 export function getMaxHP(this: IPlayerDocument): number {
-  return this.getStamina() * GameParams.STAMINA_MULTIPLIER;
+  return (
+    this.getStamina() * GameParams.STAMINA_TO_HEALTH_MULTIPLIER + GameParams.BASE_HEALTH_POINTS
+  );
+}
+
+export function getHP(this: IPlayerDocument): number {
+  return this.health_points;
 }
 
 export function getArmor(this: IPlayerDocument): number {
@@ -173,7 +161,7 @@ export function getDodgeChance(this: IPlayerDocument): number {
   return dodgeChance;
 }
 
-export function getAttackSpeed(this: IPlayerDocument): number {
+export function getAttackSpeed(this: IPlayerDocument, percentage: boolean = false): number {
   let attackSpeed = 0;
 
   // Get base attack speed from agility
@@ -192,7 +180,30 @@ export function getAttackSpeed(this: IPlayerDocument): number {
     attackSpeed += armor.attack_speed;
   });
 
+  if (percentage) {
+    return attackSpeed / (GameParams.ATTACK_SPEED_DELAY_WEIGHT + attackSpeed);
+  }
+
   return attackSpeed;
+}
+
+export function getHPRegeneration(this: IPlayerDocument): number {
+  let hpRegen = 0;
+  const stamina = this.getStamina();
+  hpRegen += stamina;
+
+  return (
+    GameParams.BASE_HP_REGEN / 100 + hpRegen / (GameParams.STAMINA_TO_HEALTH_REGEN_WEIGHT + hpRegen)
+  );
+}
+
+export function getCritMultiplier(this: IPlayerDocument): number {
+  const strength = this.getStrength();
+
+  return (
+    GameParams.DEFAULT_CRIT_MULTIPLIER +
+    strength / (GameParams.STRENGTH_TO_CRIT_POWER_WEIGHT + strength)
+  );
 }
 
 export function getAttackSpeedDelay(this: IPlayerDocument): number {
@@ -241,8 +252,7 @@ export async function saveWithRetries(this: IPlayerDocument): Promise<void> {
 
 export async function die(this: IPlayerDocument, save: boolean = false): Promise<void> {
   this.health_points = 0;
-  // this.action_points /= 2;
-  this.experience = 0;
+
   if (save) {
     await this.saveWithRetries();
   }
@@ -253,11 +263,14 @@ export async function levelUp(this: IPlayerDocument, save: boolean = false): Pro
   while (this.experience >= this.getExpCap()) {
     this.experience -= this.getExpCap();
     this.level++;
-    // this.health_points_max += 2;
-    // this.ap_gain_rate += 0.1;
+    if (this.level >= GameParams.MAX_LEVEL_CHARACTER) {
+      this.level = GameParams.MAX_LEVEL_CHARACTER;
+      this.experience = 0;
+    } else {
+      this.stat_points += GameParams.STAT_POINTS_PER_LVL;
+    }
   }
   if (save) {
-    logger.debug(`Saving player in levelUp()`);
     await this.saveWithRetries();
   }
 }
@@ -273,7 +286,9 @@ export function takeDamage(this: IPlayerDocument, dmg: number): number {
 
   this.health_points -= totalDamage;
 
-  this.recalculateAndSave();
+  if (this.health_points < 0) {
+    this.health_points = 0;
+  }
 
   return totalDamage;
 }
@@ -289,25 +304,6 @@ export function getHitDamage(this: IPlayerDocument): number {
     dmg = (weapon as IWeaponDocument).damage;
   }
   return dmg;
-}
-
-export async function hitEnemy(this: IPlayerDocument, enemy: Enemy): Promise<void> {
-  // enemy.takeIncomingDamage(this);
-  // if (this.equiped_weapon != null) {
-  //   this.inventory.forEach((item, index) => {
-  //     if (item._id.toString() === this.equiped_weapon?._id.toString()) {
-  //       (item as IWeapon).durability--;
-  //       // this.action_points -= (item as IWeapon).ap_cost;
-  //       if ((item as IWeapon).durability <= 0) {
-  //         this.inventory.splice(index, 1);
-  //         this.equiped_weapon = null;
-  //       }
-  //     }
-  //   });
-  // } else {
-  //   // this.action_points--;
-  // }
-  // await this.recalculateAndSave();
 }
 
 export async function addItemToInventory(this: IPlayerDocument, item: IItemDocument) {
@@ -339,14 +335,15 @@ export function isAlive(this: IPlayerDocument): boolean {
 }
 
 export async function revive(this: IPlayerDocument): Promise<void> {
+  logger.debug("HP after revive " + this.getMaxHP() / 2);
   this.health_points = this.getMaxHP() / 2;
   logger.debug(`Saving player in revive()`);
   await this.saveWithRetries();
 }
 
-export async function passiveRegen(this: IPlayerDocument, percentage: number): Promise<void> {
+export async function passiveRegen(this: IPlayerDocument): Promise<void> {
   const maxHP = this.getMaxHP();
-  this.health_points += maxHP * (percentage / 100);
+  this.health_points += maxHP * this.getHPRegeneration();
   if (this.health_points > maxHP) {
     this.health_points = maxHP;
   }
@@ -361,8 +358,10 @@ export async function gainAP(this: IPlayerDocument, baseAmount: number = 1): Pro
 }
 
 export function gainXP(this: IPlayerDocument, amount: number): void {
-  this.experience += amount;
-  this.levelUp(false);
+  if (this.level < GameParams.MAX_LEVEL_CHARACTER) {
+    this.experience += amount;
+    this.levelUp(false);
+  }
 }
 
 export function gainHP(
@@ -415,12 +414,15 @@ export function isItemEquiped(this: IPlayerDocument, id: number): boolean {
 }
 
 // IUnit methods
-export function getAttackDamage(this: IPlayerDocument): number {
+export function getAttackDamage(this: IPlayerDocument, opts?: { baseDamage: boolean }): number {
   let damage = this.getDamage();
 
-  // Apply crit damage
-  if (Math.random() < this.getCritChance()) {
-    damage *= GameParams.DEFAULT_CRIT_MULTIPLIER;
+  // Show base damage for indicators
+  if (!opts?.baseDamage) {
+    // Apply crit damage
+    if (Math.random() < this.getCritChance()) {
+      damage *= this.getCritMultiplier();
+    }
   }
 
   return damage;
@@ -468,9 +470,9 @@ export function getShortStats(this: IPlayerDocument, isDead: boolean = false): s
     name = `☠️<del>${name}</del>`;
   }
   const statsText = `<b>${name}</b> \- ${this.level} level
-    💚${this.health_points.toFixed(1)}\\${this.getMaxHP().toFixed(
-    1
-  )} 🗡${this.getAttackDamage().toFixed(2)} 🛡${this.getArmor().toFixed(0)}`;
+    💚${this.health_points.toFixed(1)}\\${this.getMaxHP().toFixed(1)} 🗡${this.getAttackDamage({
+    baseDamage: true,
+  }).toFixed(2)} 🛡${this.getArmor().toFixed(0)}`;
   return statsText;
 }
 

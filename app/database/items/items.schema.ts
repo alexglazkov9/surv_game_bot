@@ -23,9 +23,7 @@ export const WeaponSchema = new Schema({
   crit_chance: Number,
   dodge_chance: Number,
 
-  // DEPRECATED
-  durability: Number,
-  ap_cost: Number,
+  min_lvl: { type: Number, default: 0 },
 });
 
 export const ArmorSchema = new Schema({
@@ -42,8 +40,7 @@ export const ArmorSchema = new Schema({
   crit_chance: Number,
   dodge_chance: Number,
 
-  // DEPRECATED
-  durability: Number,
+  min_lvl: { type: Number, default: 0 },
 });
 
 const EffectSchema = new Schema({

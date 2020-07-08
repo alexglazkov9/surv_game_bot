@@ -1,47 +1,98 @@
 import { IItemDocument, IWeaponDocument, IArmorDocument, IConsumableDocument } from "./items.types";
 import { ItemType } from "../../game/misc/ItemType";
+import { IndicatorsEmojis } from "../../game/misc/IndicatorsEmojis";
+import { GameParams } from "../../game/misc/GameParameters";
 
 const SPACES = "        ";
 
-export function getItemStats(this: IItemDocument, options?: { showPrice: boolean }): string {
+export function getItemStats(
+  this: IItemDocument,
+  options?: { showPrice: boolean; showSellPrice: boolean }
+): string {
   let statsString = "";
   switch (this.__t) {
     case ItemType.WEAPON: {
       const weapon = this as IWeaponDocument;
       statsString += `<b>${weapon.name}</b> ${
-        options?.showPrice ? `- <i>$${weapon.price}</i>` : ""
-      }\n${SPACES}🗡Dmg: <b>${weapon.damage}</b>\n${SPACES}⚡️Base Speed: <b>Every ${(
-        weapon.base_attack_speed / 1000
-      ).toFixed(1)} sec</b>\n\n${
-        weapon.stamina !== 0 ? `${SPACES}🈳Stamina: ${weapon.stamina}\n` : ""
-      }${weapon.agility !== 0 ? `${SPACES}🈯️Agility: ${weapon.agility}\n` : ""}${
-        weapon.strength !== 0 ? `${SPACES}🈴Strength: ${weapon.strength}\n` : ""
-      }${weapon.attack_speed !== 0 ? `${SPACES}🔄Attack Speed: ${weapon.attack_speed}\n` : ""}${
-        weapon.crit_chance !== 0 ? `${SPACES}💢Crit Chance: ${weapon.crit_chance}\n` : ""
+        options?.showPrice
+          ? `- <i>${weapon.price} <b>${IndicatorsEmojis.CURRENCY_MONEY}</b> </i>`
+          : ""
+      }\n${SPACES}${IndicatorsEmojis.DAMAGE}Dmg: <b>${weapon.damage}</b>\n${SPACES}${
+        IndicatorsEmojis.BASE_ATTACK_SPEED_ITEM
+      }Base Speed: <b>Every ${(weapon.base_attack_speed / 1000).toFixed(1)} sec</b>\n\n${
+        weapon.stamina !== 0
+          ? `${SPACES}${IndicatorsEmojis.STAMINA}Stamina: ${weapon.stamina}\n`
+          : ""
       }${
-        weapon.dodge_chance !== 0 ? `${SPACES}✨Dodge Chance: ${weapon.dodge_chance}\n` : ""
-      }\n${SPACES}Quality: ${weapon.quality}`;
+        weapon.agility !== 0
+          ? `${SPACES}${IndicatorsEmojis.AGILITY}Agility: ${weapon.agility}\n`
+          : ""
+      }${
+        weapon.strength !== 0
+          ? `${SPACES}${IndicatorsEmojis.STRENGTH}Strength: ${weapon.strength}\n`
+          : ""
+      }${
+        weapon.attack_speed !== 0
+          ? `${SPACES}${IndicatorsEmojis.ATTACK_SPEED}Attack Speed: ${weapon.attack_speed}\n`
+          : ""
+      }${
+        weapon.crit_chance !== 0
+          ? `${SPACES}${IndicatorsEmojis.CRIT_CHANCE}Crit Chance: ${weapon.crit_chance}\n`
+          : ""
+      }${
+        weapon.dodge_chance !== 0
+          ? `${SPACES}${IndicatorsEmojis.DODGE_CHANCE}Dodge Chance: ${weapon.dodge_chance}\n`
+          : ""
+      }
+      \n${SPACES}Level required: ${weapon.min_lvl}
+      \n${SPACES}${IndicatorsEmojis.ITEM_QUALITY}Quality: ${weapon.quality}`;
+
+      statsString += `${
+        options?.showSellPrice
+          ? `\nSell price: ${
+              weapon.price *
+              GameParams.SELL_PRICE_FACTOR *
+              (weapon.quality / GameParams.MAX_ITEM_QUALITY)
+            } <b>${IndicatorsEmojis.CURRENCY_MONEY}</b>`
+          : ""
+      }\n`;
       break;
     }
     case ItemType.ARMOR: {
       const armor = this as IArmorDocument;
       // Name, type and price
       statsString += `<b>${armor.name}</b>  - ${armor.type} ${
-        options?.showPrice ? `- <i>$${armor.price}</i>` : ""
+        options?.showPrice
+          ? `- <i>${armor.price} <b>${IndicatorsEmojis.CURRENCY_MONEY}</b></i>`
+          : ""
       }\n`;
 
-      statsString += `${SPACES}🛡Armor: <b>${armor.armor}</b>\n\n`;
+      statsString += `${SPACES}${IndicatorsEmojis.ARMOR}Armor: <b>${armor.armor}</b>\n\n`;
 
-      if (armor.stamina !== 0) statsString += `${SPACES}🈳Stamina: ${armor.stamina}\n`;
-      if (armor.agility !== 0) statsString += `${SPACES}🈯️Agility: ${armor.agility}\n`;
-      if (armor.strength !== 0) statsString += `${SPACES}🈴Strength: ${armor.strength}\n`;
+      if (armor.stamina !== 0)
+        statsString += `${SPACES}${IndicatorsEmojis.STAMINA}Stamina: ${armor.stamina}\n`;
+      if (armor.agility !== 0)
+        statsString += `${SPACES}${IndicatorsEmojis.AGILITY}Agility: ${armor.agility}\n`;
+      if (armor.strength !== 0)
+        statsString += `${SPACES}${IndicatorsEmojis.STRENGTH}Strength: ${armor.strength}\n`;
       if (armor.attack_speed !== 0)
-        statsString += `${SPACES}🔄Attack Speed: ${armor.attack_speed}\n`;
-      if (armor.crit_chance !== 0) statsString += `${SPACES}💢Crit Chance: ${armor.crit_chance}\n`;
+        statsString += `${SPACES}${IndicatorsEmojis.ATTACK_SPEED}Attack Speed: ${armor.attack_speed}\n`;
+      if (armor.crit_chance !== 0)
+        statsString += `${SPACES}${IndicatorsEmojis.CRIT_CHANCE}Crit Chance: ${armor.crit_chance}\n`;
       if (armor.dodge_chance !== 0)
-        statsString += `${SPACES}✨Dodge Chance: ${armor.dodge_chance}\n`;
+        statsString += `${SPACES}${IndicatorsEmojis.DODGE_CHANCE}Dodge Chance: ${armor.dodge_chance}\n`;
 
-      statsString += `\n${SPACES}Quality: ${armor.quality}`;
+      statsString += `\n${SPACES}Level required: ${armor.min_lvl}`;
+      statsString += `\n${SPACES}${IndicatorsEmojis.ITEM_QUALITY}Quality: ${armor.quality}`;
+      statsString += `${
+        options?.showSellPrice
+          ? `\nSell price: ${
+              armor.price *
+              GameParams.SELL_PRICE_FACTOR *
+              (armor.quality / GameParams.MAX_ITEM_QUALITY)
+            } <b>${IndicatorsEmojis.CURRENCY_MONEY}</b>`
+          : ""
+      }\n`;
       break;
     }
     case ItemType.CONSUMABLE: {
@@ -49,13 +100,15 @@ export function getItemStats(this: IItemDocument, options?: { showPrice: boolean
       let effects = "";
       consumable.onConsumeEffects.forEach((effect) => {
         effects += `
-        🌀 Effect: <b>${effect.effect}</b>
-        🩹 Amount: <b>${effect.value}</b>\n`;
+        ${IndicatorsEmojis.CONSUMABLE_EFFECT} Effect: <b>${effect.effect}</b>
+        ${IndicatorsEmojis.CONSUMABLE_AMOUNT} Amount: <b>${effect.value}</b>\n`;
       });
       statsString += `<b>${consumable.name}</b> ${
-        options?.showPrice ? `- <i>$${consumable.price}</i>` : ""
+        options?.showPrice
+          ? `- <i>${consumable.price} <b>${IndicatorsEmojis.CURRENCY_MONEY}</b></i>`
+          : ""
       }\n
-        ⚙️ Charges: <b>${consumable.charges}</b>${effects}`;
+      ${IndicatorsEmojis.CONSUMABLE_CHARGES} Charges: <b>${consumable.charges}</b>${effects}`;
       break;
     }
     default: {

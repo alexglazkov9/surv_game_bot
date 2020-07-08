@@ -1,0 +1,67 @@
+[
+    {
+        "name": "Trident",
+        "damage": 6,
+        "price": 75,
+        "base_attack_speed": 8000,
+        "stamina": 5,
+        "strength": 20,
+        "agility": 0,
+        "attack_speed": 0,
+        "crit_chance": 0,
+        "dodge_chance": 5,
+        "min_lvl": 6
+    },
+    {
+        "name": "Revolver",
+        "damage": 11,
+        "price": 150,
+        "base_attack_speed": 9000,
+        "stamina": 5,
+        "strength": 25,
+        "agility": 25,
+        "attack_speed": 0,
+        "crit_chance": 0,
+        "dodge_chance": 0,
+        "min_lvl": 11
+    },
+    {
+        "name": "Crossbow",
+        "damage": 8,
+        "price": 110,
+        "base_attack_speed": 8000,
+        "stamina": 0,
+        "strength": 15,
+        "agility": 15,
+        "attack_speed": 10,
+        "crit_chance": 5,
+        "dodge_chance": 0,
+        "min_lvl": 9
+    },
+    {
+        "name": "Claymore",
+        "damage": 7,
+        "price": 95,
+        "base_attack_speed": 9000,
+        "stamina": 10,
+        "strength": 25,
+        "agility": 0,
+        "attack_speed": 0,
+        "crit_chance": 10,
+        "dodge_chance": 0,
+        "min_lvl": 9
+    },
+    {
+        "name": "Thompson",
+        "damage": 11,
+        "price": 175,
+        "base_attack_speed": 7000,
+        "stamina": 0,
+        "strength": 20,
+        "agility": 30,
+        "attack_speed": 25,
+        "crit_chance": 0,
+        "dodge_chance": 0,
+        "min_lvl": 15
+    }
+]

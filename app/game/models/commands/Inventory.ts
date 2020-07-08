@@ -15,51 +15,31 @@ import { CallbackData } from "../CallbackData";
 import { ItemType } from "../../misc/ItemType";
 import { PlayerModel } from "../../../database/players/players.model";
 import { ArmorTypes } from "../../misc/ArmorTypes";
+import { GameParams } from "../../misc/GameParameters";
+import { IndicatorsEmojis } from "../../misc/IndicatorsEmojis";
 
 // Number of columns in the inventory
 const COL_NUM = 2;
 const INVENTORY_SECTIONS = [ItemType.ARMOR, ItemType.WEAPON, ItemType.CONSUMABLE];
-const USE_BTN_TXT = "USE";
-const EQUIP_BTN_TXT = "EQUIP";
+const USE_BTN_TXT = "✔️USE✔️";
+const EQUIP_BTN_TXT = "✔️EQUIP✔️";
+const UNEQUIP_BTN_TXT = "✔️UNEQUIP✔️";
+const SELL_BTN_TXT = "💱SELL💱";
 
 export class Inventory {
   character: IPlayerDocument;
-  // chatId: number;
-  // fromId: number;
-  // messageId: number;
   inventoryMessage?: TelegramBot.Message;
   items: IItemDocument[] | undefined;
-  // player: IPlayerDocument | undefined;
   sectionSelectedIndex: number;
   previousMsgText?: string;
   previousOpts?: any;
 
   constructor({ character }: { character: IPlayerDocument }) {
     this.character = character;
-    // this.chatId = chat_id;
-    // this.fromId = from_id;
-    // this.messageId = message_id;
     this.sectionSelectedIndex = 0;
   }
 
-  // pullPlayer = async () => {
-  //   // Pull all items to be displayed in the shop
-  //   try {
-  //     this.player = await PlayerModel.findPlayer({
-  //       telegram_id: this.character.telegram_id,
-  //       chat_id: this.character.chat_id,
-  //     });
-  //   } catch (e) {
-  //     logger.error(e);
-  //   }
-  // };
-
   display = async () => {
-    // Pull items from db if have not been pulled yet
-    // if (this.player === undefined) {
-    //   await this.pullPlayer();
-    // }
-
     const opts: TelegramBot.SendMessageOptions = {
       parse_mode: "HTML",
       reply_markup: {
@@ -109,37 +89,37 @@ export class Inventory {
                 item.name
               } (${(item as IWeapon).quality})`;
             } else if (INVENTORY_SECTIONS[this.sectionSelectedIndex] === ItemType.ARMOR) {
-              btnTxt = `${item.name} (${(item as IArmor).durability})`;
+              btnTxt = `${item.name} (${(item as IArmor).quality})`;
 
               // Adds emoji tp indicate equipped items
               if (this.character.isItemEquiped(item._id)) {
                 switch ((item as IArmor).type) {
                   case ArmorTypes.HEAD: {
-                    btnTxt = `⛑${btnTxt}`;
+                    btnTxt = `${IndicatorsEmojis.HEAD_EQUIPPED}${btnTxt}`;
                     break;
                   }
                   case ArmorTypes.RINGS: {
-                    btnTxt = `💍${btnTxt}`;
+                    btnTxt = `${IndicatorsEmojis.RING_EQUIPPED}${btnTxt}`;
                     break;
                   }
                   case ArmorTypes.NECKLACE: {
-                    btnTxt = `⛓${btnTxt}`;
+                    btnTxt = `${IndicatorsEmojis.NECKLACE_EQUIPPED}${btnTxt}`;
                     break;
                   }
                   case ArmorTypes.BODY: {
-                    btnTxt = `🦺${btnTxt}`;
+                    btnTxt = `${IndicatorsEmojis.BODY_EQUIPPED}${btnTxt}`;
                     break;
                   }
                   case ArmorTypes.LEGS: {
-                    btnTxt = `👖${btnTxt}`;
+                    btnTxt = `${IndicatorsEmojis.LEGS_EQUIPPED}${btnTxt}`;
                     break;
                   }
                   case ArmorTypes.HANDS: {
-                    btnTxt = `🧤${btnTxt}`;
+                    btnTxt = `${IndicatorsEmojis.HANDS_EQUIPPED}${btnTxt}`;
                     break;
                   }
                   case ArmorTypes.FEET: {
-                    btnTxt = `👟${btnTxt}`;
+                    btnTxt = `${IndicatorsEmojis.FEET_EQUIPPED}${btnTxt}`;
                     break;
                   }
                 }
@@ -229,16 +209,17 @@ export class Inventory {
       // Player clicked on any item
       case CallbackActions.INVENTORY: {
         let inlineKeyboardUseBtn: TelegramBot.InlineKeyboardButton[] = [];
+        let inlineKeyboardSellBtn: TelegramBot.InlineKeyboardButton[] = [];
 
         const itemId = data.payload;
 
-        const callbackData = new CallbackData({
+        const useCallbackData = new CallbackData({
           action: CallbackActions.INVENTORY_USE,
           telegram_id: this.character.telegram_id,
           payload: itemId,
         });
 
-        const useBtnData = callbackData.toJson();
+        const useBtnData = useCallbackData.toJson();
         inlineKeyboardUseBtn = [
           {
             text: selectedSection === ItemType.CONSUMABLE ? USE_BTN_TXT : EQUIP_BTN_TXT,
@@ -246,10 +227,29 @@ export class Inventory {
           },
         ];
 
+        if (selectedSection !== ItemType.CONSUMABLE) {
+          const sellCallbackData = new CallbackData({
+            action: CallbackActions.INVENTORY_SELL,
+            telegram_id: this.character.telegram_id,
+            payload: itemId,
+          });
+
+          const sellBtnData = sellCallbackData.toJson();
+          inlineKeyboardSellBtn = [
+            {
+              text: SELL_BTN_TXT,
+              callback_data: sellBtnData,
+            },
+          ];
+        }
+
         if (this.character) {
           this.character.inventory.forEach(async (item) => {
             if (item._id.toString() === itemId) {
-              itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
+              itemStats = `${(item as IItemDocument).getItemStats({
+                showPrice: false,
+                showSellPrice: true,
+              })}`;
             }
           });
         }
@@ -259,7 +259,11 @@ export class Inventory {
           chat_id: this.character.private_chat_id,
           parse_mode: "HTML",
           reply_markup: {
-            inline_keyboard: [inlineKeyboardUseBtn, ...this.generateLayout()],
+            inline_keyboard: [
+              inlineKeyboardSellBtn,
+              inlineKeyboardUseBtn,
+              ...this.generateLayout(),
+            ],
           },
         };
 
@@ -282,12 +286,25 @@ export class Inventory {
             if (this.character) {
               this.character.inventory.forEach(async (item) => {
                 if (item._id.toString() === itemId) {
-                  itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
+                  itemStats = `${(item as IItemDocument).getItemStats({
+                    showPrice: false,
+                    showSellPrice: true,
+                  })}`;
                   if (this.character.equipment.weapon?._id.toString() === item._id.toString()) {
                     if (this.character !== undefined) this.character.equipment.weapon = null;
                   } else {
                     if (this.character !== undefined) {
-                      this.character.equipment.weapon = item._id;
+                      if ((item as IWeapon).min_lvl <= this.character.level) {
+                        this.character.equipment.weapon = item._id;
+                      } else {
+                        const optsLowLevel: TelegramBot.AnswerCallbackQueryOptions = {
+                          callback_query_id: callbackQuery.id,
+                          show_alert: false,
+                          text: "Your level is too low",
+                        };
+                        bot.answerCallbackQuery(optsLowLevel);
+                        return;
+                      }
                     }
                   }
 
@@ -300,13 +317,21 @@ export class Inventory {
           case ItemType.ARMOR: {
             this.character.inventory.forEach(async (item) => {
               if (item._id.toString() === itemId) {
-                logger.debug("Found");
-                itemStats = `${(item as IItemDocument).getItemStats({ showPrice: false })}`;
+                itemStats = `${(item as IItemDocument).getItemStats({
+                  showPrice: false,
+                  showSellPrice: true,
+                })}`;
 
                 const isEquipped = this.character.isItemEquiped(item._id);
-
-                logger.debug("isEquipped " + isEquipped);
-                logger.debug("type " + (item as IArmor).type);
+                if ((item as IArmor).min_lvl > this.character.level) {
+                  const optsLowLevel: TelegramBot.AnswerCallbackQueryOptions = {
+                    callback_query_id: callbackQuery.id,
+                    show_alert: false,
+                    text: "Your level is too low",
+                  };
+                  bot.answerCallbackQuery(optsLowLevel);
+                  return;
+                }
                 switch ((item as IArmor).type) {
                   case ArmorTypes.HEAD: {
                     this.character.equipment.armor.head = isEquipped ? null : item._id;
@@ -337,7 +362,6 @@ export class Inventory {
                     break;
                   }
                 }
-                logger.debug(this.character.equipment.armor.feet);
                 await (this.character as IPlayerDocument)?.saveWithRetries();
               }
             });
@@ -364,6 +388,55 @@ export class Inventory {
             }
             break;
           }
+        }
+
+        const opts: TelegramBot.EditMessageTextOptions = {
+          message_id: this.inventoryMessage?.message_id,
+          chat_id: this.character.private_chat_id,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: this.generateLayout(),
+          },
+        };
+
+        const msgTxt = this.getHeaderText() + `\n${itemStats}`;
+        if (msgTxt !== this.previousMsgText || opts !== this.previousOpts) {
+          this.previousMsgText = msgTxt;
+          this.previousOpts = opts;
+          bot.editMessageText(msgTxt, opts);
+        }
+
+        break;
+      }
+      // Player clicked SELL
+      case CallbackActions.INVENTORY_SELL: {
+        // Selected item's id
+        const itemId = data.payload;
+
+        const itemSold = this.character.inventory.splice(
+          this.character.inventory.findIndex((item) => item._id.toString() === itemId.toString()),
+          1
+        );
+
+        if (itemSold[0]) {
+          switch (itemSold[0].__t) {
+            case ItemType.WEAPON: {
+              this.character.money +=
+                itemSold[0].price *
+                GameParams.SELL_PRICE_FACTOR *
+                ((itemSold[0] as IWeapon).quality / GameParams.MAX_ITEM_QUALITY);
+              break;
+            }
+            case ItemType.ARMOR: {
+              this.character.money +=
+                itemSold[0].price *
+                GameParams.SELL_PRICE_FACTOR *
+                ((itemSold[0] as IArmor).quality / GameParams.MAX_ITEM_QUALITY);
+              break;
+            }
+          }
+
+          this.character.saveWithRetries();
         }
 
         const opts: TelegramBot.EditMessageTextOptions = {
@@ -429,7 +502,7 @@ export class Inventory {
 
   getHeaderText = (): string => {
     const section = INVENTORY_SECTIONS[this.sectionSelectedIndex];
-    let text = `<pre>    </pre>▶️<b>${section.toUpperCase()}</b>◀️\n\n`;
+    let text = `▶️▶️▶️<b>${section.toUpperCase()}</b>◀️◀️◀️\n\n`;
     text += `${(this.character as IPlayerDocument)?.getShortStats()}\n`;
     return text;
   };
@@ -441,8 +514,6 @@ export class Inventory {
         this.inventoryMessage?.message_id.toString()
       );
     }
-
-    //bot.deleteMessage(this.chatId, this.messageId.toString());
 
     bot.removeListener("callback_query", this.onCallbackQuery);
   };

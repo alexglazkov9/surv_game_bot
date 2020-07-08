@@ -15,13 +15,21 @@ export interface IPlayer {
   stamina: number;
   strength: number;
   agility: number;
-  // action_points: { type: Number, default: 10 },
-  // ap_gain_rate: { type: Number, default: 1 },
 
   // Character progression
   level: number;
   experience: number;
   stat_points: number;
+  statistics: {
+    duels: {
+      won: number;
+      lost: number;
+    };
+    pve: {
+      battles: number;
+      last_hits: number;
+    };
+  };
 
   // Character possesions
   money: number;
@@ -38,8 +46,6 @@ export interface IPlayer {
     };
     weapon: IItem | null;
   };
-  //equiped_armor: IItem | null;
-  //equiped_weapon: IItem | null;
 }
 
 export interface IPlayerDocument extends IPlayer, Document, IUnit {
@@ -48,16 +54,18 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   getAgility: (this: IPlayerDocument) => number;
   getStrength: (this: IPlayerDocument) => number;
   getMaxHP: (this: IPlayerDocument) => number;
+  getHP: (this: IPlayerDocument) => number;
   getDamage: (this: IPlayerDocument) => number;
   getCritChance: (this: IPlayerDocument) => number;
   getDodgeChance: (this: IPlayerDocument) => number;
   getArmorReduction: (this: IPlayerDocument) => number;
   getAttackSpeedDelay: (this: IPlayerDocument) => number;
+  getHPRegeneration: (this: IPlayerDocument) => number;
+  getCritMultiplier: (this: IPlayerDocument) => number;
 
   getAllEquipment: (this: IPlayerDocument) => IArmor[];
   isItemEquiped: (this: IPlayerDocument, id: number) => boolean;
 
-  getPlayerStats: (this: IPlayerDocument) => string;
   getMinStats: (this: IPlayerDocument) => string;
   getShortStats: (this: IPlayerDocument, isDead?: boolean) => string;
   recalculateAndSave: (this: IPlayerDocument) => Promise<void>;
@@ -69,20 +77,19 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   revive: (this: IPlayerDocument) => Promise<void>;
   passiveRegen: (this: IPlayerDocument, percentage: number) => Promise<void>;
   gainAP: (this: IPlayerDocument, baseAmount?: number) => Promise<void>;
-  hitEnemy: (this: IPlayerDocument, enemy: Enemy) => Promise<void>;
   die: (this: IPlayerDocument, save?: boolean) => Promise<void>;
   levelUp: (this: IPlayerDocument, save?: boolean) => Promise<void>;
   sendPlayerStats: (this: IPlayerDocument, messageId: number, callerTId?: number) => Promise<void>;
   getEquipedWeapon: (this: IPlayerDocument) => IWeapon | null;
   getEquipedArmor: (this: IPlayerDocument) => IArmor | null;
-  getAttackSpeed: (this: IPlayerDocument) => number;
+  getAttackSpeed: (this: IPlayerDocument, percentage?: boolean) => number;
   addItemToInventory: (this: IPlayerDocument, item: IItemDocument) => Promise<void>;
   gainXP: (this: IPlayerDocument, amount: number) => void;
   gainHP: (this: IPlayerDocument, amount: number, opts?: { isPercentage?: boolean }) => void;
   saveWithRetries: (this: IPlayerDocument) => Promise<void>;
   getLatest: (this: IPlayerDocument) => Promise<IPlayerDocument>;
   // IUnit
-  getAttackDamage: (this: IPlayerDocument) => number;
+  getAttackDamage: (this: IPlayerDocument, opts?: { baseDamage: boolean }) => number;
   getArmor: (this: IPlayerDocument) => number;
   getName: (this: IPlayerDocument) => string;
   attack: (this: IPlayerDocument, target: IUnit) => number;

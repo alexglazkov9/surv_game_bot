@@ -5,9 +5,12 @@ import { logger } from "../../utils/logger";
 
 import enemies = require("../../database/enemies/enemies.json");
 import { getRandomInt, sleep } from "../../utils/utils";
-import { NPCBattle } from "./battle/NPCBattle";
+import { NPCBattle } from "./battle/battleground/NPCBattle";
 import { BattleEvents } from "./battle/BattleEvents";
 import { GameParams } from "../misc/GameParameters";
+import { BattleGround } from "./battle/battleground/BattleGround";
+import { IUnit } from "./units/IUnit";
+import { Duel } from "./battle/battleground/Duel";
 
 const RESPAWN_RATE = 60 * 60 * 1000;
 const HP_REGEN_RATE = 60 * 60 * 1000;
@@ -16,6 +19,7 @@ const HP_REGEN_PERCENTAGE = 10;
 export class GameInstance {
   private chatId: number;
   private bot: TelegramBot;
+  private battleInProgress?: BattleGround;
   private spawnProbabilities: number[];
 
   constructor({ chat_id, bot }: { chat_id: number; bot: TelegramBot }) {
@@ -32,6 +36,22 @@ export class GameInstance {
     this.startRevivingPlayers();
   };
 
+  startDuel = async (host: IUnit, wager: number) => {
+    const duel = new Duel({
+      chatId: this.chatId,
+      bot: this.bot,
+      prizeMoney: wager,
+    });
+
+    duel.addToTeamHost(host);
+    duel.initBattle();
+    duel.addListener(BattleEvents.BATTLE_ENDED, () => {
+      this.battleInProgress = undefined;
+    });
+
+    this.battleInProgress = duel;
+  };
+
   startSpawning = async () => {
     const msecs = getRandomInt(5, 30) * 60 * 1000;
     logger.verbose(`Start spawning in ${this.chatId} in ${msecs / 1000} seconds`);
@@ -40,32 +60,40 @@ export class GameInstance {
   };
 
   spawnEnemy = async (onlyOne: boolean = false) => {
-    logger.debug("in spawnEnemy");
-
     const enemy = await this.getRandomEnemy();
-    // const enemy2 = await this.getRandomEnemy(enemy.level);
+    //const enemy2 = await this.getRandomEnemy(enemy.level);
 
     const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
 
-    if (!onlyOne) {
-      battle.addListener(BattleEvents.BATTLE_ENDED, this.startSpawning);
-    }
+    battle.addListener(BattleEvents.BATTLE_ENDED, () => {
+      if (!onlyOne) {
+        this.startSpawning();
+      }
+      this.battleInProgress = undefined;
+    });
 
-    battle.addToNPCTeam(enemy);
-    // battle.addToNPCTeam(enemy2);
+    battle.addToTeamHost(enemy);
+    //battle.addToTeamHost(enemy2);
 
-    // 30% chance to instantly start fighting someone
-    if (getRandomInt(0, 10) >= 7) {
+    // 5% chance to instantly start fighting someone
+    if (getRandomInt(0, 100) >= 95) {
       let playerUnit;
       // Makes sure enemy attacks player of the same level
       do {
         playerUnit = await PlayerModel.getRandomPlayer(this.chatId, true);
       } while (Math.abs(playerUnit.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
 
-      battle.addToPlayersTeam(playerUnit);
+      battle.addToTeamGuest(playerUnit);
     }
 
-    battle.startBattle();
+    while (this.isBattleInProgress()) {
+      logger.debug("Battle is in progress. Waiting turn...");
+      await sleep(5000);
+    }
+
+    logger.debug("Starting battle now");
+    battle.initBattle();
+    this.battleInProgress = battle;
     logger.verbose(`Spawning enemy [${enemy.name}] in ${this.chatId}`);
   };
 
@@ -109,11 +137,6 @@ export class GameInstance {
   };
 
   startRevivingPlayers = async () => {
-    // if (this.respawn_timer === undefined) {
-    //   clearInterval(this.respawn_timer);
-    //   this.respawn_timer = undefined;
-    // }
-    // this.respawn_timer = setInterval(this.reviveAllPlayers, this.respawn_rate);
     while (true) {
       await sleep(RESPAWN_RATE);
       this.reviveAllPlayers();
@@ -132,11 +155,6 @@ export class GameInstance {
   };
 
   startHpRegen = async () => {
-    // if (this.hp_regen_timer == undefined) {
-    //   clearInterval(this.hp_regen_timer);
-    //   this.hp_regen_timer = undefined;
-    // }
-    // this.hp_regen_timer = setInterval(this.regenHpToAllPlayers, this.hp_regen_rate);
     while (true) {
       await sleep(HP_REGEN_RATE);
       this.regenHpToAllPlayers();
@@ -150,18 +168,7 @@ export class GameInstance {
     });
   };
 
-  //   startApIncome = () => {
-  //     if (this.ap_gain_timer == undefined) {
-  //       clearInterval(this.ap_gain_timer);
-  //       this.ap_gain_timer = undefined;
-  //     }
-  //     this.ap_gain_timer = setInterval(this.grantAPToAllPlayers, this.ap_gain_rate);
-  //   };
-
-  //   grantAPToAllPlayers = async () => {
-  //     const players = await db?.PlayerModel.getAllFromChat(this.chat_id, true);
-  //     players?.forEach((player) => {
-  //       player.gainAP(1);
-  //     });
-  //   };
+  isBattleInProgress(): boolean {
+    return this.battleInProgress !== undefined;
+  }
 }

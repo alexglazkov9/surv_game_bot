@@ -1,0 +1,67 @@
+[
+    {
+        "name": "Agile Grasps",
+        "price": 80,
+        "armor": 7,
+        "type": "Hands",
+        "stamina": 1,
+        "strength": 1,
+        "agility": 2,
+        "attack_speed": 0,
+        "crit_chance": 0,
+        "dodge_chance": 0,
+        "min_lvl": 15
+    },
+    {
+        "name": "Novice Skirt",
+        "price": 30,
+        "armor": 3,
+        "type": "Legs",
+        "stamina": 1,
+        "strength": 1,
+        "agility": 0,
+        "attack_speed": 0,
+        "crit_chance": 0,
+        "dodge_chance": 0,
+        "min_lvl": 3
+    },
+    {
+        "name": "Feet of Protection",
+        "price": 40,
+        "armor": 7,
+        "type": "Feet",
+        "stamina": 1,
+        "strength": 0,
+        "agility": 0,
+        "attack_speed": 0,
+        "crit_chance": 0,
+        "dodge_chance": 0,
+        "min_lvl": 9
+    },
+    {
+        "name": "Diamond Necklace",
+        "price": 225,
+        "armor": 0,
+        "type": "Necklace",
+        "stamina": 15,
+        "strength": 18,
+        "agility": 17,
+        "attack_speed": 0,
+        "crit_chance": 0,
+        "dodge_chance": 0,
+        "min_lvl": 27
+    },
+    {
+        "name": "Iron Armor Greaves",
+        "price": 85,
+        "armor": 6,
+        "type": "Legs",
+        "stamina": 6,
+        "strength": 0,
+        "agility": 4,
+        "attack_speed": 0,
+        "crit_chance": 2,
+        "dodge_chance": 0,
+        "min_lvl": 14
+    }
+]
