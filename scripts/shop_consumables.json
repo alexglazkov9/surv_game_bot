@@ -1,0 +1,46 @@
+[
+    {
+        "name": "Flask",
+        "charges": 1,
+        "onComsumeEffects": [
+            {
+                "effect": "RestoreHP",
+                "value": 10
+            }
+        ],
+        "price": 7
+    },
+    {
+        "name": "Apple Pie",
+        "charges": 1,
+        "onComsumeEffects": [
+            {
+                "effect": "RestoreHP",
+                "value": 15
+            }
+        ],
+        "price": 10
+    },
+    {
+        "name": "Apple Juice",
+        "charges": 1,
+        "onComsumeEffects": [
+            {
+                "effect": "RestoreHPPercent",
+                "value": 50
+            }
+        ],
+        "price": 15
+    },
+    {
+        "name": "Lemonade",
+        "charges": 1,
+        "onComsumeEffects": [
+            {
+                "effect": "RestoreHPPercent",
+                "value": 25
+            }
+        ],
+        "price": 12.5
+    }
+]

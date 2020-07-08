@@ -11,7 +11,6 @@ import {
   findPlayerByName,
 } from "./players.statics";
 import {
-  getPlayerStats,
   recalculateAndSave,
   getExpCap,
   getHitDamage,
@@ -20,7 +19,6 @@ import {
   revive,
   passiveRegen,
   gainAP,
-  hitEnemy,
   die,
   levelUp,
   getMinStats,
@@ -41,35 +39,101 @@ import {
   getArmor,
   gainHP,
   getLatest,
+  getMaxHP,
+  getStamina,
+  getAgility,
+  getStrength,
+  getDamage,
+  getCritChance,
+  getDodgeChance,
+  getArmorReduction,
+  getAttackSpeedDelay,
+  getAllEquipment,
+  isItemEquiped,
+  getHPRegeneration,
+  getCritMultiplier,
+  getHP,
 } from "./players.methods";
 import { ItemSchema, WeaponSchema, ConsumableSchema, ArmorSchema } from "../items/items.schema";
+import { GameParams } from "../../game/misc/GameParameters";
 
 const PlayerSchema = new Schema({
   telegram_id: Number,
   chat_id: Number,
   private_chat_id: Number,
   name: String,
-  health_points_max: { type: Number, default: 10 },
-  health_points: { type: Number, default: 10 },
-  armor_max: { type: Number, default: 0 },
-  armor: { type: Number, default: 0 },
+
+  health_points: { type: Number, default: GameParams.BASE_HEALTH_POINTS },
+
+  // Main stats
+  stamina: { type: Number, default: 0 },
+  strength: { type: Number, default: 0 },
+  agility: { type: Number, default: 0 },
+
+  // Character progression
   level: { type: Number, default: 1 },
   experience: { type: Number, default: 0 },
-  action_points: { type: Number, default: 10 },
-  ap_gain_rate: { type: Number, default: 1 },
+  stat_points: { type: Number, default: 5 },
+  statistics: {
+    duels: {
+      won: { type: Number, deafult: 0 },
+      lost: { type: Number, default: 0 },
+    },
+    pve: {
+      battles: { type: Number, default: 0 },
+      last_hits: { type: Number, deafult: 0 },
+    },
+  },
+
+  // Character possesions
   money: { type: Number, default: 0 },
   inventory: {
     type: [ItemSchema],
   },
-  equiped_armor: {
-    type: Schema.Types.ObjectId,
-    default: null,
-    // ref: "player.inventory",
-  },
-  equiped_weapon: {
-    type: Schema.Types.ObjectId,
-    default: null,
-    // ref: "player.inventory",
+  equipment: {
+    armor: {
+      head: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      necklace: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+
+      rings: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      body: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      hands: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      legs: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+      feet: {
+        type: Schema.Types.ObjectId,
+        default: null,
+        // ref: "player.inventory",
+      },
+    },
+    weapon: {
+      type: Schema.Types.ObjectId,
+      default: null,
+      // ref: "player.inventory",
+    },
   },
 });
 
@@ -96,7 +160,24 @@ PlayerSchema.statics.getAllFromChat = getAllFromChat;
 PlayerSchema.statics.getAll = getAll;
 PlayerSchema.statics.getRandomMinMaxLvl = getRandomMinMaxLvl;
 
-PlayerSchema.methods.getPlayerStats = getPlayerStats;
+// Stats
+PlayerSchema.methods.getStamina = getStamina;
+PlayerSchema.methods.getAgility = getAgility;
+PlayerSchema.methods.getStrength = getStrength;
+PlayerSchema.methods.getDamage = getDamage;
+PlayerSchema.methods.getCritChance = getCritChance;
+PlayerSchema.methods.getDodgeChance = getDodgeChance;
+PlayerSchema.methods.getMaxHP = getMaxHP;
+PlayerSchema.methods.getHP = getHP;
+PlayerSchema.methods.getArmorReduction = getArmorReduction;
+PlayerSchema.methods.getAttackSpeedDelay = getAttackSpeedDelay;
+PlayerSchema.methods.getHPRegeneration = getHPRegeneration;
+PlayerSchema.methods.getCritMultiplier = getCritMultiplier;
+
+// Misc
+PlayerSchema.methods.getAllEquipment = getAllEquipment;
+PlayerSchema.methods.isItemEquiped = isItemEquiped;
+
 PlayerSchema.methods.getMinStats = getMinStats;
 PlayerSchema.methods.getShortStats = getShortStats;
 PlayerSchema.methods.recalculateAndSave = recalculateAndSave;
@@ -108,7 +189,6 @@ PlayerSchema.methods.isAlive = isAlive;
 PlayerSchema.methods.revive = revive;
 PlayerSchema.methods.passiveRegen = passiveRegen;
 PlayerSchema.methods.gainAP = gainAP;
-PlayerSchema.methods.hitEnemy = hitEnemy;
 PlayerSchema.methods.die = die;
 PlayerSchema.methods.levelUp = levelUp;
 // PlayerSchema.methods.sendPlayerStats = sendPlayerStats;

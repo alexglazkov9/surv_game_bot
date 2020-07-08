@@ -20,9 +20,12 @@
     "@types/config": "0.0.36",
     "@types/mongoose": "^5.7.21",
     "@types/node-telegram-bot-api": "^0.40.3",
+    "axios": "^0.19.2",
     "config": "^3.3.1",
+    "html-dom-parser": "^0.3.0",
     "mongoose": "^5.9.17",
     "node-telegram-bot-api": "^0.50.0",
+    "telegra.ph": "^1.0.1",
     "typescript": "^3.9.3",
     "winston": "^3.3.2"
   },

@@ -1,3 +1,45 @@
 export class GameParams {
   static ALLOWED_LEVEL_DIFFERENCE = 5;
+
+  // PROGRESSION
+  static STAT_POINTS_PER_LVL = 5;
+  static MAX_LEVEL_CHARACTER = 30;
+
+  // STATS
+  static PLAYER_BASE_DAMAGE = 1;
+  static PLAYER_BASE_ATTACK_SPEED = 5000;
+  static BASE_HEALTH_POINTS = 10;
+
+  // Armor
+  static ARMOR_REDUCTION_WEIGHT = 250;
+  // Agility
+  static AGILITY_TO_ATTACK_SPEED_MULTIPLIER = 1;
+  static AGILITY_TO_CRIT_WEIGHT = 250;
+  static AGILITY_TO_DODGE_WEIGHT = 250;
+  // Stamina
+  static STAMINA_TO_HEALTH_MULTIPLIER = 2;
+  static STAMINA_TO_HEALTH_REGEN_WEIGHT = 250;
+  // Strength
+  static STRENGTH_MULTIPLIER = 0.25;
+  static STRENGTH_TO_DAMAGE_WEIGHT = 250;
+  // Attack speed
+  static ATTACK_SPEED_DELAY_WEIGHT = 250;
+  // Crits
+  static DEFAULT_CRIT_MULTIPLIER = 1.5;
+  static STRENGTH_TO_CRIT_POWER_WEIGHT = 250;
+  // HP Regen
+  static BASE_HP_REGEN = 10;
+
+  // ITEMS
+  static MAX_ITEM_QUALITY = 1000;
+
+  //SHOP
+  static SELL_PRICE_FACTOR = 0.25;
+  static ITEM_QUALITY_SHOP = 750;
+
+  //NPC
+  static NPC_LVL_SCALE_FACTOR = 0.2;
+
+  //BATTLE LOG
+  static BATLLE_LOG_CHAT_LENGTH = 20;
 }

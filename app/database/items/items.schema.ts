@@ -1,6 +1,7 @@
 import { Schema } from "mongoose";
 import { getItemStats } from "./items.methods";
 import { onConsume } from "./consumables.methods";
+import { GameParams } from "../../game/misc/GameParameters";
 
 export const ItemSchema = new Schema({
   name: String,
@@ -9,14 +10,37 @@ export const ItemSchema = new Schema({
 
 export const WeaponSchema = new Schema({
   damage: Number,
-  durability: Number,
-  ap_cost: Number,
+  base_attack_speed: Number,
+
+  quality: { type: Number, default: GameParams.MAX_ITEM_QUALITY },
+
+  // Stats
+  stamina: Number,
+  strength: Number,
+  agility: Number,
+
   attack_speed: Number,
+  crit_chance: Number,
+  dodge_chance: Number,
+
+  min_lvl: { type: Number, default: 0 },
 });
 
 export const ArmorSchema = new Schema({
   armor: Number,
-  durability: Number,
+  type: String,
+  quality: { type: Number, default: GameParams.MAX_ITEM_QUALITY },
+
+  // Stats
+  stamina: Number,
+  strength: Number,
+  agility: Number,
+
+  attack_speed: Number,
+  crit_chance: Number,
+  dodge_chance: Number,
+
+  min_lvl: { type: Number, default: 0 },
 });
 
 const EffectSchema = new Schema({

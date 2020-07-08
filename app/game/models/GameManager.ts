@@ -12,6 +12,8 @@ import { UserModel } from "../../database/users/users.model";
 import { IPlayerDocument, IPlayer } from "../../database/players/players.types";
 import { BotCommands } from "../misc/BotCommands";
 import { CharacterStats } from "./commands/CharacterStats";
+import { Duel } from "./battle/battleground/Duel";
+import { IUnit } from "./units/IUnit";
 
 const AUTO_DELETE_DELAY = 5000;
 
@@ -39,9 +41,9 @@ export class GameManager {
   };
 
   setUpCommandsHandlers = () => {
-    this.bot.onText(/\/start_game/, this.startGame);
+    this.bot.onText(/\/start_game@?[A-z]*/, this.startGame);
 
-    this.bot.onText(/^\/reg ?(.*)/, this.reg);
+    this.bot.onText(/^\/reg@?[A-z]* ?(.*)/, this.reg);
 
     this.bot.onText(/^\/character@?[A-z]* ?[A-z0-9]*/, (msg) =>
       this.privateChatCmdHandler(msg, BotCommands.CHARACTER)
@@ -53,9 +55,13 @@ export class GameManager {
 
     this.bot.onText(/\/shop@?[A-z]*/, (msg) => this.privateChatCmdHandler(msg, BotCommands.SHOP));
 
-    this.bot.onText(/\/help/, this.help);
+    this.bot.onText(/\/help@?[A-z]*/, this.help);
 
-    this.bot.onText(/\/start/, this.start);
+    this.bot.onText(/\/duel@?[A-z]* ?([0-9]*)/, (msg) =>
+      this.privateChatCmdHandler(msg, BotCommands.DUEL)
+    );
+
+    this.bot.onText(/\/start@?[A-z]*/, this.start);
 
     // ADMIN COMMANDS
 
@@ -101,7 +107,7 @@ export class GameManager {
   };
 
   privateChatCmdHandler = async (msg: TelegramBot.Message, cmd: string) => {
-    let character: IPlayer;
+    let character: IPlayerDocument;
 
     if (msg.chat.type === "private") {
       // Message received from private chat
@@ -145,6 +151,39 @@ export class GameManager {
       }
       case BotCommands.INVENTORY: {
         this.inventory(character);
+        break;
+      }
+      case BotCommands.DUEL: {
+        if (this.gameInstances[msg.chat.id]?.isBattleInProgress()) {
+          this.bot.sendMessage(
+            character.private_chat_id,
+            "Cannot start duel while another battle is in progress"
+          );
+          return;
+        }
+
+        if (!character.isAlive()) {
+          this.bot.sendMessage(character.private_chat_id, "Can't start duel while DEAD.");
+          return;
+        }
+
+        const args = msg.text?.split(" ");
+        if (args && args[1] && Number.parseInt(args[1], 10)) {
+          const wager = Number.parseInt(args[1], 10);
+
+          if (character.money < wager) {
+            this.bot.sendMessage(
+              character.private_chat_id,
+              "You don't have enough money to start duel"
+            );
+            return;
+          }
+          this.duel(character, wager);
+        } else {
+          this.bot.sendMessage(character.private_chat_id, "Usage: /duel <number>");
+          return;
+        }
+
         break;
       }
       case BotCommands.CHARACTER: {
@@ -256,7 +295,7 @@ export class GameManager {
     shop.display();
   };
 
-  inventory = (character: IPlayer) => {
+  inventory = (character: IPlayerDocument) => {
     const inventory = new Inventory({
       character,
     });
@@ -272,7 +311,7 @@ export class GameManager {
   reg = async (msg: TelegramBot.Message, match: RegExpExecArray | null) => {
     if (match && match[1]) {
       const opts: TelegramBot.SendMessageOptions = {
-        parse_mode: "Markdown",
+        parse_mode: "HTML",
         reply_to_message_id: msg.message_id,
       };
 
@@ -286,27 +325,35 @@ export class GameManager {
         return;
       }
 
-      if (match[1].length < 3) {
+      const nickname = match[1].toString();
+      if (
+        nickname.length < 3 ||
+        nickname.length > 15 ||
+        nickname.includes(" ") ||
+        nickname.includes("@") ||
+        nickname.includes("<") ||
+        nickname.includes(">")
+      ) {
         this.bot.sendMessage(
           msg.chat.id,
-          `Nickname "${match[1]}" is too short. (Minimum 3 characters)`,
+          `Nickname must be between 3 and 15 characters long. nickname can't include spaces`,
           opts
         );
         return;
       }
 
-      const isNameTaken = await PlayerModel.isNameTaken(match[1]);
+      const isNameTaken = await PlayerModel.isNameTaken(nickname);
 
       if (isNameTaken) {
-        this.bot.sendMessage(msg.chat.id, `Nickname "${match[1]}" is already taken.`, opts);
+        this.bot.sendMessage(msg.chat.id, `Nickname "${nickname}" is already taken.`, opts);
       } else {
         const player = await PlayerModel.createNewPlayer({
           telegram_id: msg.from?.id,
           chat_id: msg.chat.id,
-          name: match[1],
+          name: nickname,
         });
         if (player) {
-          this.bot.sendMessage(msg.chat.id, `Welcome to the game ${player.name}`, opts);
+          this.bot.sendMessage(msg.chat.id, `Welcome to the game ${player.getName()}`, opts);
         } else {
           this.bot.sendMessage(msg.chat.id, `Something went wrong`, opts);
         }
@@ -351,5 +398,9 @@ export class GameManager {
     this.bot.sendMessage(msg.chat.id, message, {
       disable_notification: true,
     });
+  };
+
+  duel = async (charcater: IPlayerDocument, wager: number) => {
+    this.gameInstances[charcater.chat_id]?.startDuel(charcater, wager);
   };
 }

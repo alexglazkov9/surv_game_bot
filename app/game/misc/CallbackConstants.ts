@@ -4,6 +4,7 @@ export class CallbackActions {
   // PLAYER STATS
   static PLAYER_STATS_NAV = "statsnav";
   static PLAYERS_STATS_CLOSE = "statsclose";
+  static PLAYER_STAT_SPEND = "statspend";
 
   // INVENTORY
   static INVENTORY = "inv";
@@ -12,6 +13,7 @@ export class CallbackActions {
   static INVENTORY_NAV_NEXT = "invnav_next";
   static INVENTORY_NAV_CLOSE = "invnav_close";
   static INVENTORY_USE = "inv_use";
+  static INVENTORY_SELL = "inv_sell";
 
   // SHOP
   static SHOP = "shop";

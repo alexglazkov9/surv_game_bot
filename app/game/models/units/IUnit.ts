@@ -14,4 +14,6 @@ export interface IUnit extends EventEmitter.EventEmitter {
   isAlive(): boolean;
   getShortStats(isDead?: boolean): string;
   getHpIndicator(): string;
+  getMaxHP(): number;
+  getHP(): number;
 }
