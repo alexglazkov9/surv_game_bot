@@ -2,6 +2,7 @@ import { Document, Model } from "mongoose";
 import { IItem, IWeapon, IArmor, IItemDocument } from "../items/items.types";
 import { Enemy } from "../../game/models/units/Enemy";
 import { IUnit } from "../../game/models/units/IUnit";
+import { AttackDetails } from "../../game/misc/AttackDetails";
 
 export interface IPlayer {
   telegram_id: number;
@@ -71,7 +72,6 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   recalculateAndSave: (this: IPlayerDocument) => Promise<void>;
   getExpCap: (this: IPlayerDocument) => number;
   getHitDamage: (this: IPlayerDocument) => number;
-  takeDamage: (this: IPlayerDocument, dmg: number) => number;
   canAttack: (this: IPlayerDocument, callbackQueryId?: string) => boolean;
   isAlive: (this: IPlayerDocument) => boolean;
   revive: (this: IPlayerDocument) => Promise<void>;
@@ -89,10 +89,11 @@ export interface IPlayerDocument extends IPlayer, Document, IUnit {
   saveWithRetries: (this: IPlayerDocument) => Promise<void>;
   getLatest: (this: IPlayerDocument) => Promise<IPlayerDocument>;
   // IUnit
-  getAttackDamage: (this: IPlayerDocument, opts?: { baseDamage: boolean }) => number;
+  getAttackDamage: (this: IPlayerDocument, opts?: { baseDamage: boolean }) => AttackDetails;
   getArmor: (this: IPlayerDocument) => number;
   getName: (this: IPlayerDocument) => string;
-  attack: (this: IPlayerDocument, target: IUnit) => number;
+  attack: (this: IPlayerDocument, target: IUnit) => AttackDetails;
+  takeDamage: (this: IPlayerDocument, attack: AttackDetails) => AttackDetails;
   startAttacking: (this: IPlayerDocument) => void;
   stopAttacking: (this: IPlayerDocument) => void;
   getHpIndicator: (this: IPlayerDocument) => string;

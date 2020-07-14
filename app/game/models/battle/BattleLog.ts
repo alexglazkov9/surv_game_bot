@@ -3,6 +3,7 @@ import { Telegraph } from "../../telegraph/Telegraph";
 import { SIDE } from "./battleground/BattleGround";
 import { IndicatorsEmojis } from "../../misc/IndicatorsEmojis";
 import { GameParams } from "../../misc/GameParameters";
+import { AttackDetails, AttackModifier } from "../../misc/AttackDetails";
 
 export class BattleLog {
   header: string[];
@@ -24,11 +25,11 @@ export class BattleLog {
     this.battleHistory.push(`➕ ${unit.getName()} joined the fight`);
   };
 
-  attacked = (attacker: IUnit, target: IUnit, dmgDealt: number, tag?: string) => {
+  attacked = (attacker: IUnit, target: IUnit, attack: AttackDetails, tag?: string) => {
     this.battleHistory.push(
-      `${
-        tag ?? ""
-      }${attacker.getName()} ⚔️ ${target.getName()} ${target.getHpIndicator()}\nDealt <b>${dmgDealt.toFixed(
+      `${tag ?? ""}${attacker.getName()} ⚔️${this.getAttackModifier(
+        attack.modifier
+      )} ${target.getName()} ${target.getHpIndicator()}\nDealt <b>${attack.damageDealt.toFixed(
         1
       )}</b> damage`
     );
@@ -142,4 +143,15 @@ export class BattleLog {
     this.footer.push(`<a href="${url}">Full log</a>`);
     return url;
   };
+
+  getAttackModifier(modifier: AttackModifier) {
+    switch (modifier) {
+      case AttackModifier.CRITICAL_STRIKE:
+        return IndicatorsEmojis.CRIT_CHANCE;
+      case AttackModifier.DODGE:
+        return IndicatorsEmojis.DODGE_CHANCE;
+      default:
+        return "";
+    }
+  }
 }

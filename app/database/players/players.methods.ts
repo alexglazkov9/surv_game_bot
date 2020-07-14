@@ -8,6 +8,7 @@ import { IUnit } from "../../game/models/units/IUnit";
 import { BattleEvents } from "../../game/models/battle/BattleEvents";
 import { PlayerModel } from "./players.model";
 import { GameParams } from "../../game/misc/GameParameters";
+import { AttackDetails, AttackModifier } from "../../game/misc/AttackDetails";
 
 const DEFAULT_ATTACK_SPEED = 5000;
 
@@ -275,14 +276,16 @@ export async function levelUp(this: IPlayerDocument, save: boolean = false): Pro
   }
 }
 
-export function takeDamage(this: IPlayerDocument, dmg: number): number {
+export function takeDamage(this: IPlayerDocument, attack: AttackDetails): AttackDetails {
   // Chance to dodge
   if (Math.random() <= this.getDodgeChance()) {
-    return 0;
+    attack.damageDealt = 0;
+    attack.modifier = AttackModifier.DODGE;
+    return attack;
   }
 
   // Armor reduction
-  const totalDamage = dmg * (1 - this.getArmorReduction());
+  const totalDamage = attack.damageDealt * (1 - this.getArmorReduction());
 
   this.health_points -= totalDamage;
 
@@ -290,7 +293,9 @@ export function takeDamage(this: IPlayerDocument, dmg: number): number {
     this.health_points = 0;
   }
 
-  return totalDamage;
+  attack.damageDealt = totalDamage;
+
+  return attack;
 }
 
 export function getExpCap(this: IPlayerDocument): number {
@@ -414,7 +419,11 @@ export function isItemEquiped(this: IPlayerDocument, id: number): boolean {
 }
 
 // IUnit methods
-export function getAttackDamage(this: IPlayerDocument, opts?: { baseDamage: boolean }): number {
+export function getAttackDamage(
+  this: IPlayerDocument,
+  opts?: { baseDamage: boolean }
+): AttackDetails {
+  let modifier = AttackModifier.NORMAL;
   let damage = this.getDamage();
 
   // Show base damage for indicators
@@ -422,10 +431,11 @@ export function getAttackDamage(this: IPlayerDocument, opts?: { baseDamage: bool
     // Apply crit damage
     if (Math.random() < this.getCritChance()) {
       damage *= this.getCritMultiplier();
+      modifier = AttackModifier.CRITICAL_STRIKE;
     }
   }
 
-  return damage;
+  return new AttackDetails({ damageDealt: damage, modifier });
 }
 
 export function getBaseAttackSpeed(this: IPlayerDocument): number {
@@ -441,10 +451,10 @@ export function getName(this: IPlayerDocument): string {
   return this.name;
 }
 
-export function attack(this: IPlayerDocument, target: IUnit): number {
-  const dmgDealt = target.takeDamage(this.getAttackDamage());
+export function attack(this: IPlayerDocument, target: IUnit): AttackDetails {
+  const attackDetails = target.takeDamage(this.getAttackDamage());
 
-  return dmgDealt;
+  return attackDetails;
 }
 
 export function startAttacking(this: IPlayerDocument) {
@@ -470,9 +480,9 @@ export function getShortStats(this: IPlayerDocument, isDead: boolean = false): s
     name = `☠️<del>${name}</del>`;
   }
   const statsText = `<b>${name}</b> \- ${this.level} level
-    💚${this.health_points.toFixed(1)}\\${this.getMaxHP().toFixed(1)} 🗡${this.getAttackDamage({
-    baseDamage: true,
-  }).toFixed(2)} 🛡${this.getArmor().toFixed(0)}`;
+    💚${this.health_points.toFixed(1)}\\${this.getMaxHP().toFixed(1)} 🗡${this.getDamage().toFixed(
+    2
+  )} 🛡${this.getArmor().toFixed(0)}`;
   return statsText;
 }
 

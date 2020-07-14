@@ -163,16 +163,16 @@ export class CharacterStats {
     ${IndicatorsEmojis.HEALTH_POINTS}HP: ${characterDoc.health_points.toFixed(
       1
     )}\\${characterDoc.getMaxHP().toFixed(1)}
-    ${IndicatorsEmojis.DAMAGE}Damage: ${characterDoc.getDamage().toFixed(0)}
-    ${IndicatorsEmojis.ARMOR}Armor: ${characterDoc.getArmor().toFixed(0)}
+    ${IndicatorsEmojis.DAMAGE}Damage: ${characterDoc.getDamage().toFixed(2)}
+    ${IndicatorsEmojis.ARMOR}Armor: ${characterDoc.getArmor().toFixed(2)}
 
     ${IndicatorsEmojis.EXPERIENCE}Exp: ${characterDoc.experience.toFixed(
       1
     )}\\${characterDoc.getExpCap().toFixed(0)}
 
-    ${IndicatorsEmojis.STAMINA}Stamina: ${characterDoc.getStamina().toFixed(0)}
-    ${IndicatorsEmojis.AGILITY}Agility: ${characterDoc.getAgility().toFixed(0)}
-    ${IndicatorsEmojis.STRENGTH}Strength: ${characterDoc.getStrength()}
+    ${IndicatorsEmojis.STAMINA}Stamina: ${characterDoc.getStamina().toFixed(2)}
+    ${IndicatorsEmojis.AGILITY}Agility: ${characterDoc.getAgility().toFixed(2)}
+    ${IndicatorsEmojis.STRENGTH}Strength: ${characterDoc.getStrength().toFixed(2)}
 
     ${IndicatorsEmojis.CRIT_CHANCE}Crit Chance: ${(characterDoc.getCritChance() * 100).toFixed(2)}%
     ${IndicatorsEmojis.CRIT_POWER}Crit Power: ${(characterDoc.getCritMultiplier() * 100).toFixed(
@@ -181,12 +181,12 @@ export class CharacterStats {
     ${IndicatorsEmojis.DODGE_CHANCE}Dodge Chance: ${(characterDoc.getDodgeChance() * 100).toFixed(
       2
     )}%
-    ${IndicatorsEmojis.ATTACK_SPEED}Attack Speed: ${characterDoc.getAttackSpeed().toFixed(0)} (${(
+    ${IndicatorsEmojis.ATTACK_SPEED}Attack Speed: ${characterDoc.getAttackSpeed().toFixed(2)} (${(
       characterDoc.getAttackSpeed(true) * 100
     ).toFixed(2)}%)
     ${IndicatorsEmojis.HP_REGEN}HP Regeneration: ${(characterDoc.getHPRegeneration() * 100).toFixed(
       2
-    )}% per hour
+    )}% per minute
 
     ${IndicatorsEmojis.MONEY}Money: ${characterDoc.money.toFixed(2)} <b>${
       IndicatorsEmojis.CURRENCY_MONEY

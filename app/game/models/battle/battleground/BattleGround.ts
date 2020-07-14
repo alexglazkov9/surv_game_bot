@@ -44,11 +44,13 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
 
   addToTeamGuest = (unit: IUnit) => {
     this.teamGuest.push(unit);
+    unit.isInFight = true;
     unit.addListener(BattleEvents.UNIT_ATTACKS, () => this.handleAttack(unit));
   };
 
   addToTeamHost = (unit: IUnit) => {
     this.teamHost.push(unit);
+    unit.isInFight = true;
     unit.addListener(BattleEvents.UNIT_ATTACKS, () => this.handleAttack(unit));
   };
 
@@ -223,8 +225,9 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
   };
 
   cleanUpUnit = (unit: IUnit) => {
+    unit.isInFight = false;
     unit.stopAttacking();
-    unit.removeAllListeners();
+    unit.removeListener(BattleEvents.UNIT_ATTACKS, this.handleAttack);
   };
 
   isAnyoneAlive = (units: IUnit[]): boolean => {

@@ -1,19 +1,19 @@
 import TelegramBot = require("node-telegram-bot-api");
-import { PlayerModel } from "../../database/players/players.model";
-import { Enemy, ON_DEATH_EVENT } from "./units/Enemy";
+import { Enemy } from "./units/Enemy";
 import { logger } from "../../utils/logger";
 
 import enemies = require("../../database/enemies/enemies.json");
 import { getRandomInt, sleep } from "../../utils/utils";
 import { NPCBattle } from "./battle/battleground/NPCBattle";
 import { BattleEvents } from "./battle/BattleEvents";
-import { GameParams } from "../misc/GameParameters";
 import { BattleGround } from "./battle/battleground/BattleGround";
 import { IUnit } from "./units/IUnit";
 import { Duel } from "./battle/battleground/Duel";
+import { CharacterPool } from "./CharacterPool";
+import { GameParams } from "../misc/GameParameters";
 
 const RESPAWN_RATE = 60 * 60 * 1000;
-const HP_REGEN_RATE = 60 * 60 * 1000;
+const HP_REGEN_RATE = 1 * 60 * 1000;
 const HP_REGEN_PERCENTAGE = 10;
 
 export class GameInstance {
@@ -30,7 +30,7 @@ export class GameInstance {
     this.generateSpawnProbabilities();
   }
 
-  start = () => {
+  start = async () => {
     this.startSpawning();
     this.startHpRegen();
     this.startRevivingPlayers();
@@ -75,15 +75,17 @@ export class GameInstance {
     battle.addToTeamHost(enemy);
     //battle.addToTeamHost(enemy2);
 
-    // 5% chance to instantly start fighting someone
-    if (getRandomInt(0, 100) >= 95) {
+    // 10% chance to instantly start fighting someone
+    if (getRandomInt(0, 100) >= 90) {
       let playerUnit;
       // Makes sure enemy attacks player of the same level
       do {
-        playerUnit = await PlayerModel.getRandomPlayer(this.chatId, true);
+        const players = CharacterPool.getInstance().getAllFromChat({ chatId: this.chatId });
+        playerUnit = players[getRandomInt(0, players.length)];
       } while (Math.abs(playerUnit.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
 
       battle.addToTeamGuest(playerUnit);
+      battle.startFight();
     }
 
     while (this.isBattleInProgress()) {
@@ -99,14 +101,13 @@ export class GameInstance {
 
   getRandomEnemy = async (enemyLevel?: number): Promise<Enemy> => {
     if (enemyLevel === undefined) {
-      enemyLevel = (await PlayerModel.getRandomMinMaxLvl(this.chatId)) ?? 1;
+      enemyLevel = CharacterPool.getInstance().getRandomLevel({ chatId: this.chatId });
     }
-    logger.debug(enemyLevel);
+
     // Randomly picks enemy type to spawn, repicks if lvl requirements are out of bounds
     let enemyType;
     do {
       enemyType = this.getRandomEnemyType();
-      // logger.debug(enemyType);
     } while (enemies[enemyType].min_lvl > enemyLevel || enemies[enemyType].max_lvl < enemyLevel);
 
     return Enemy.fromJson({
@@ -144,7 +145,10 @@ export class GameInstance {
   };
 
   reviveAllPlayers = async () => {
-    const players = await PlayerModel.getAllFromChat(this.chatId, false);
+    const players = CharacterPool.getInstance().getAllFromChat({
+      chatId: this.chatId,
+      alive: false,
+    });
     players?.forEach((player) => {
       player.revive();
     });
@@ -162,7 +166,10 @@ export class GameInstance {
   };
 
   regenHpToAllPlayers = async () => {
-    const players = await PlayerModel.getAllFromChat(this.chatId, true);
+    const players = CharacterPool.getInstance().getAllFromChat({
+      chatId: this.chatId,
+      alive: true,
+    });
     players?.forEach((player) => {
       player.passiveRegen(HP_REGEN_PERCENTAGE);
     });

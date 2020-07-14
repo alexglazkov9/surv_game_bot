@@ -42,5 +42,5 @@ if (process.env.NODE_ENV === "production") {
 
 export const db = connect();
 
-const gameManager = new GameManager({ bot });
+export const gameManager = new GameManager({ bot });
 gameManager.launch();

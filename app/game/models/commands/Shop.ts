@@ -222,26 +222,19 @@ export class Shop {
         switch (data.payload) {
           case CallbackActions.SHOP_NAV_CLOSE: {
             const telegramId = callbackQuery.from.id;
-            const player = await PlayerModel.findOne({
-              telegram_id: telegramId,
-              chat_id: this.player.chat_id,
-            });
 
-            if (player) {
-              const opts: TelegramBot.EditMessageTextOptions = {
-                message_id: this.shopMessage?.message_id,
-                chat_id: this.player.private_chat_id,
-                parse_mode: "HTML",
-              };
+            const opts: TelegramBot.EditMessageTextOptions = {
+              message_id: this.shopMessage?.message_id,
+              chat_id: this.player.private_chat_id,
+              parse_mode: "HTML",
+            };
 
-              bot.editMessageText(
-                `${player?.name} walked around the shop, but could not afford to buy anything!`,
-                opts
-              );
-              this.cleanUp();
-              return;
-            }
-            break;
+            bot.editMessageText(
+              `${this.player?.name} walked around the shop, but could not afford to buy anything!`,
+              opts
+            );
+            this.cleanUp();
+            return;
           }
           case CallbackActions.SHOP_NAV_NEXT: {
             this.sectionSelectedIndex = ++this.sectionSelectedIndex % SHOP_SECTIONS.length;

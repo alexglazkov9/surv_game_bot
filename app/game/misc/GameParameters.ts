@@ -5,7 +5,7 @@ export class GameParams {
   static STAT_POINTS_PER_LVL = 5;
   static MAX_LEVEL_CHARACTER = 30;
   static BASE_EXP_CHARACTER = 10;
-  static EXP_GROWTH_FACTOR = 30;
+  static EXP_GROWTH_FACTOR = 20;
 
   // STATS
   static PLAYER_BASE_DAMAGE = 1;
@@ -30,7 +30,7 @@ export class GameParams {
   static DEFAULT_CRIT_MULTIPLIER = 1.5;
   static STRENGTH_TO_CRIT_POWER_WEIGHT = 250;
   // HP Regen
-  static BASE_HP_REGEN = 10;
+  static BASE_HP_REGEN = 1;
 
   // ITEMS
   static MAX_ITEM_QUALITY = 1000;

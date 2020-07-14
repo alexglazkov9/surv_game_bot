@@ -19,6 +19,7 @@ import {
   IArmorDocument,
 } from "../../../database/items/items.types";
 import { ItemType } from "../../misc/ItemType";
+import { AttackDetails, AttackModifier } from "../../misc/AttackDetails";
 
 const UPDATE_DELAY = 5000;
 const ATTACK_CHAT_EVENT = "attack_chat_event";
@@ -27,7 +28,7 @@ const ATTACK_BY_PLAYER = "attack_by_player";
 const UPDATE_EVENT = "update_event";
 export const ON_DEATH_EVENT = "ON_DEATH_EVENT";
 
-export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
+export class Enemy extends EventEmitter.EventEmitter implements IUnit {
   id: number;
   bot: TelegramBot;
   chatId: number;
@@ -47,6 +48,8 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
   dodgeChance: number;
   critChance: number;
   attackSpeed: number;
+
+  isInFight: boolean = false;
 
   // DROP
   expOnDeath: number;
@@ -259,21 +262,23 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
     }
   };
 
-  attack = (target: IUnit): number => {
+  attack = (target: IUnit): AttackDetails => {
     const dmgDealt = target.takeDamage(this.getAttackDamage());
     return dmgDealt;
   };
 
-  getAttackDamage = (): number => {
+  getAttackDamage = (): AttackDetails => {
+    let modifier = AttackModifier.NORMAL;
     let damage =
       this.damage * (1 + this.strength / (GameParams.STRENGTH_TO_DAMAGE_WEIGHT + this.strength));
 
     // Apply crit damage
     if (Math.random() < this.getCritChance()) {
       damage *= GameParams.DEFAULT_CRIT_MULTIPLIER;
+      modifier = AttackModifier.CRITICAL_STRIKE;
     }
 
-    return damage;
+    return new AttackDetails({ damageDealt: damage, modifier });
   };
 
   getCritChance = () => {
@@ -319,20 +324,24 @@ export class Enemy extends EventEmitter.EventEmitter implements INPCUnit {
     return this.name;
   };
 
-  takeDamage = (dmg: number) => {
+  takeDamage = (attack: AttackDetails) => {
     // Chance to dodge
     if (Math.random() <= this.getDodgeChance()) {
-      return 0;
+      attack.modifier = AttackModifier.DODGE;
+      attack.damageDealt = 0;
+      return attack;
     }
 
     // Armor reduction
-    const totalDamage = dmg * (1 - this.getArmorReduction());
+    const totalDamage = attack.damageDealt * (1 - this.getArmorReduction());
 
-    this.hp -= dmg;
+    this.hp -= totalDamage;
     if (this.hp < 0) {
       this.hp = 0;
     }
-    return dmg;
+    attack.damageDealt = totalDamage;
+
+    return attack;
   };
 
   isAlive = (): boolean => {

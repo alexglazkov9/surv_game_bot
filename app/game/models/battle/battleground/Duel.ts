@@ -8,6 +8,7 @@ import { PlayerModel } from "../../../../database/players/players.model";
 import { logger } from "../../../../utils/logger";
 import { BattleEvents } from "../BattleEvents";
 import { IndicatorsEmojis } from "../../../misc/IndicatorsEmojis";
+import { CharacterPool } from "../../CharacterPool";
 
 const LEAVE_DELAY = 15 * 1000;
 
@@ -115,10 +116,14 @@ export class Duel extends BattleGround {
     let optsCall: TelegramBot.AnswerCallbackQueryOptions;
 
     if (callbackData.payload === this.id && callbackData.action === CallbackActions.JOIN_FIGHT) {
-      const player = await PlayerModel.findPlayer({
-        telegram_id: callbackQuery.from.id,
-        chat_id: this.chatId,
+      const player = CharacterPool.getInstance().getOne({
+        telegramId: callbackQuery.from.id,
+        chatId: this.chatId,
       });
+
+      if (player === undefined) {
+        return;
+      }
 
       // Prevent double joining, if the character is already in the fight
       if (

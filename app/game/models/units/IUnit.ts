@@ -1,14 +1,16 @@
 import EventEmitter = require("events");
+import { AttackDetails } from "../../misc/AttackDetails";
 
 export interface IUnit extends EventEmitter.EventEmitter {
   attackTimer?: NodeJS.Timeout;
   level: number;
+  isInFight: boolean;
 
-  getAttackDamage(): number;
+  getAttackDamage(): AttackDetails;
   getAttackSpeed(): number;
   getName(): string;
-  attack(target: IUnit): number;
-  takeDamage(dmg: number): number;
+  attack(target: IUnit): AttackDetails;
+  takeDamage(attack: AttackDetails): AttackDetails;
   startAttacking(): void;
   stopAttacking(): void;
   isAlive(): boolean;

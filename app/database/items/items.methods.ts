@@ -17,31 +17,37 @@ export function getItemStats(
         options?.showPrice
           ? `- <i>${weapon.price} <b>${IndicatorsEmojis.CURRENCY_MONEY}</b> </i>`
           : ""
-      }\n${SPACES}${IndicatorsEmojis.DAMAGE}Dmg: <b>${weapon.damage}</b>\n${SPACES}${
+      }\n${SPACES}${IndicatorsEmojis.DAMAGE}Dmg: <b>${weapon.damage.toFixed(2)}</b>\n${SPACES}${
         IndicatorsEmojis.BASE_ATTACK_SPEED_ITEM
       }Base Speed: <b>Every ${(weapon.base_attack_speed / 1000).toFixed(1)} sec</b>\n\n${
         weapon.stamina !== 0
-          ? `${SPACES}${IndicatorsEmojis.STAMINA}Stamina: ${weapon.stamina}\n`
+          ? `${SPACES}${IndicatorsEmojis.STAMINA}Stamina: ${weapon.stamina.toFixed(2)}\n`
           : ""
       }${
         weapon.agility !== 0
-          ? `${SPACES}${IndicatorsEmojis.AGILITY}Agility: ${weapon.agility}\n`
+          ? `${SPACES}${IndicatorsEmojis.AGILITY}Agility: ${weapon.agility.toFixed(2)}\n`
           : ""
       }${
         weapon.strength !== 0
-          ? `${SPACES}${IndicatorsEmojis.STRENGTH}Strength: ${weapon.strength}\n`
+          ? `${SPACES}${IndicatorsEmojis.STRENGTH}Strength: ${weapon.strength.toFixed(2)}\n`
           : ""
       }${
         weapon.attack_speed !== 0
-          ? `${SPACES}${IndicatorsEmojis.ATTACK_SPEED}Attack Speed: ${weapon.attack_speed}\n`
+          ? `${SPACES}${IndicatorsEmojis.ATTACK_SPEED}Attack Speed: ${weapon.attack_speed.toFixed(
+              2
+            )}\n`
           : ""
       }${
         weapon.crit_chance !== 0
-          ? `${SPACES}${IndicatorsEmojis.CRIT_CHANCE}Crit Chance: ${weapon.crit_chance}\n`
+          ? `${SPACES}${IndicatorsEmojis.CRIT_CHANCE}Crit Chance: ${weapon.crit_chance.toFixed(
+              2
+            )}\n`
           : ""
       }${
         weapon.dodge_chance !== 0
-          ? `${SPACES}${IndicatorsEmojis.DODGE_CHANCE}Dodge Chance: ${weapon.dodge_chance}\n`
+          ? `${SPACES}${IndicatorsEmojis.DODGE_CHANCE}Dodge Chance: ${weapon.dodge_chance.toFixed(
+              2
+            )}\n`
           : ""
       }
       \n${SPACES}Level required: ${weapon.min_lvl}
@@ -49,11 +55,11 @@ export function getItemStats(
 
       statsString += `${
         options?.showSellPrice
-          ? `\nSell price: ${
+          ? `\n${SPACES}Sell price: ${(
               weapon.price *
               GameParams.SELL_PRICE_FACTOR *
               (weapon.quality / GameParams.MAX_ITEM_QUALITY)
-            } <b>${IndicatorsEmojis.CURRENCY_MONEY}</b>`
+            ).toFixed(2)} <b>${IndicatorsEmojis.CURRENCY_MONEY}</b>`
           : ""
       }\n`;
       break;
@@ -67,30 +73,40 @@ export function getItemStats(
           : ""
       }\n`;
 
-      statsString += `${SPACES}${IndicatorsEmojis.ARMOR}Armor: <b>${armor.armor}</b>\n\n`;
+      statsString += `${SPACES}${IndicatorsEmojis.ARMOR}Armor: <b>${armor.armor.toFixed(
+        2
+      )}</b>\n\n`;
 
       if (armor.stamina !== 0)
-        statsString += `${SPACES}${IndicatorsEmojis.STAMINA}Stamina: ${armor.stamina}\n`;
+        statsString += `${SPACES}${IndicatorsEmojis.STAMINA}Stamina: ${armor.stamina.toFixed(2)}\n`;
       if (armor.agility !== 0)
-        statsString += `${SPACES}${IndicatorsEmojis.AGILITY}Agility: ${armor.agility}\n`;
+        statsString += `${SPACES}${IndicatorsEmojis.AGILITY}Agility: ${armor.agility.toFixed(2)}\n`;
       if (armor.strength !== 0)
-        statsString += `${SPACES}${IndicatorsEmojis.STRENGTH}Strength: ${armor.strength}\n`;
+        statsString += `${SPACES}${IndicatorsEmojis.STRENGTH}Strength: ${armor.strength.toFixed(
+          2
+        )}\n`;
       if (armor.attack_speed !== 0)
-        statsString += `${SPACES}${IndicatorsEmojis.ATTACK_SPEED}Attack Speed: ${armor.attack_speed}\n`;
+        statsString += `${SPACES}${
+          IndicatorsEmojis.ATTACK_SPEED
+        }Attack Speed: ${armor.attack_speed.toFixed(2)}\n`;
       if (armor.crit_chance !== 0)
-        statsString += `${SPACES}${IndicatorsEmojis.CRIT_CHANCE}Crit Chance: ${armor.crit_chance}\n`;
+        statsString += `${SPACES}${
+          IndicatorsEmojis.CRIT_CHANCE
+        }Crit Chance: ${armor.crit_chance.toFixed(2)}\n`;
       if (armor.dodge_chance !== 0)
-        statsString += `${SPACES}${IndicatorsEmojis.DODGE_CHANCE}Dodge Chance: ${armor.dodge_chance}\n`;
+        statsString += `${SPACES}${
+          IndicatorsEmojis.DODGE_CHANCE
+        }Dodge Chance: ${armor.dodge_chance.toFixed(2)}\n`;
 
       statsString += `\n${SPACES}Level required: ${armor.min_lvl}`;
       statsString += `\n${SPACES}${IndicatorsEmojis.ITEM_QUALITY}Quality: ${armor.quality}`;
       statsString += `${
         options?.showSellPrice
-          ? `\nSell price: ${
+          ? `\n${SPACES}Sell price: ${(
               armor.price *
               GameParams.SELL_PRICE_FACTOR *
               (armor.quality / GameParams.MAX_ITEM_QUALITY)
-            } <b>${IndicatorsEmojis.CURRENCY_MONEY}</b>`
+            ).toFixed(2)} <b>${IndicatorsEmojis.CURRENCY_MONEY}</b>`
           : ""
       }\n`;
       break;

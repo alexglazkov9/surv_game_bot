@@ -9,6 +9,8 @@ import { BattleGround, SIDE } from "./BattleGround";
 import { CallbackData } from "../../CallbackData";
 import { CallbackActions } from "../../../misc/CallbackConstants";
 import { PlayerModel } from "../../../../database/players/players.model";
+import { gameManager } from "../../../../app";
+import { CharacterPool } from "../../CharacterPool";
 
 const UPDATE_DELAY = 5000;
 const LEAVE_DELAY = 5 * 60 * 1000;
@@ -78,10 +80,14 @@ export class NPCBattle extends BattleGround {
 
     if (callbackData.payload === this.id && callbackData.action === CallbackActions.JOIN_FIGHT) {
       // Fetches character
-      const player = await PlayerModel.findPlayer({
-        telegram_id: callbackQuery.from.id,
-        chat_id: this.chatId,
+      const player: IPlayerDocument | undefined = CharacterPool.getInstance().getOne({
+        chatId: this.chatId,
+        telegramId: callbackQuery.from.id,
       });
+      logger.debug(player);
+      if (player === undefined) {
+        return;
+      }
 
       // Checks if the unit is already in the team
       if (
@@ -150,7 +156,7 @@ export class NPCBattle extends BattleGround {
         }
       } while (!target.isAlive());
 
-      // Hadnles attack
+      // Handles attack
       const dmgDealt = attacker.attack(target);
       //this.lastHitBy = attacker;
 
@@ -164,7 +170,6 @@ export class NPCBattle extends BattleGround {
 
         if (isUnitTeamGuest) {
           await this.rewardPlayers(target as Enemy, attacker);
-          //(attacker as IPlayerDocument).saveWithRetries();
         }
 
         this.cleanUpUnit(target);
@@ -241,7 +246,5 @@ export class NPCBattle extends BattleGround {
       await (rndUnit as IPlayerDocument).addItemToInventory(itemDrop);
       this.battleLog.itemDropped(rndUnit, itemDrop.name);
     }
-
-    //this.teamGuest.forEach((character) => (character as IPlayerDocument).saveWithRetries());
   };
 }
