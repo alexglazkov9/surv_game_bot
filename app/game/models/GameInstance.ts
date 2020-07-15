@@ -53,6 +53,7 @@ export class GameInstance {
   };
 
   startSpawning = async () => {
+    this.battleInProgress = undefined;
     const msecs = getRandomInt(5, 30) * 60 * 1000;
     logger.verbose(`Start spawning in ${this.chatId} in ${msecs / 1000} seconds`);
     await sleep(msecs);
