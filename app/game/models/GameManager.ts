@@ -464,7 +464,6 @@ export class GameManager {
         i++;
       }
     } while (i < 5);
-    //await ShopWeaponModel.create(weapons);
 
     //Armor
     await ShopArmorModel.deleteMany({});
@@ -481,6 +480,5 @@ export class GameManager {
         i++;
       }
     } while (i < 5);
-    //await ShopArmorModel.create(armors);
   };
 }
