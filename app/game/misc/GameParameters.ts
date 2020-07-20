@@ -35,13 +35,13 @@ export class GameParams {
   // ITEMS
   static MAX_ITEM_QUALITY = 1000;
 
-  //SHOP
+  // SHOP
   static SELL_PRICE_FACTOR = 0.25;
   static ITEM_QUALITY_SHOP = 750;
 
-  //NPC
+  // NPC
   static NPC_LVL_SCALE_FACTOR = 0.2;
 
-  //BATTLE LOG
+  // BATTLE LOG
   static BATLLE_LOG_CHAT_LENGTH = 20;
 }

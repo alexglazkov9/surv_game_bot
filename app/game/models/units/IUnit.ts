@@ -1,15 +1,15 @@
 import EventEmitter = require("events");
 import { AttackDetails } from "../../misc/AttackDetails";
+import { IUpdatable } from "../../IUpdatable";
 
-export interface IUnit extends EventEmitter.EventEmitter {
+export interface IUnit extends EventEmitter.EventEmitter, IUpdatable {
   attackTimer?: NodeJS.Timeout;
   level: number;
-  isInFight: boolean;
 
-  getAttackDamage(): AttackDetails;
+  getAttackDamage(attackDetails: AttackDetails): AttackDetails;
   getAttackSpeed(): number;
   getName(): string;
-  attack(target: IUnit): AttackDetails;
+  attack(targets: IUnit[]): AttackDetails;
   takeDamage(attack: AttackDetails): AttackDetails;
   startAttacking(): void;
   stopAttacking(): void;

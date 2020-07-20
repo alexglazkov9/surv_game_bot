@@ -25,17 +25,17 @@ export class BattleLog {
     this.battleHistory.push(`➕ ${unit.getName()} joined the fight`);
   };
 
-  attacked = (attacker: IUnit, target: IUnit, attack: AttackDetails, tag?: string) => {
+  attacked = (attacker: IUnit, attack: AttackDetails, tag?: string) => {
     this.battleHistory.push(
       `${tag ?? ""}${attacker.getName()} ⚔️${this.getAttackModifier(
         attack.modifier
-      )} ${target.getName()} ${target.getHpIndicator()}\nDealt <b>${attack.damageDealt.toFixed(
+      )} ${attack.target?.getName()} ${attack.target?.getHpIndicator()}\nDealt <b>${attack.damageDealt.toFixed(
         1
       )}</b> damage`
     );
   };
 
-  killed = (attacker: IUnit, target: IUnit) => {
+  killed = (target: IUnit) => {
     this.battleHistory.push(`⚰️${target.getName()}`);
   };
 

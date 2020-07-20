@@ -11,6 +11,7 @@ import { CallbackActions } from "../../../misc/CallbackConstants";
 import { PlayerModel } from "../../../../database/players/players.model";
 import { gameManager } from "../../../../app";
 import { CharacterPool } from "../../CharacterPool";
+import { Character } from "../../units/Character";
 
 const UPDATE_DELAY = 5000;
 const LEAVE_DELAY = 5 * 60 * 1000;
@@ -21,8 +22,8 @@ export class NPCBattle extends BattleGround {
   constructor({ chatId, bot }: { chatId: number; bot: TelegramBot }) {
     super({ chatId, bot });
 
-    this.addListener(BattleEvents.LEAVE_BATTLE, this.leaveBattle);
-    this.leaveBattleTimer = setInterval(() => this.emit(BattleEvents.LEAVE_BATTLE), LEAVE_DELAY);
+    this.addListener(BattleEvents.LEAVE_BATTLE, this._leaveBattle);
+    this.leaveBattleTimer = setTimeout(() => this.emit(BattleEvents.LEAVE_BATTLE), LEAVE_DELAY);
   }
 
   initBattle = async () => {
@@ -37,12 +38,12 @@ export class NPCBattle extends BattleGround {
     super.initBattle();
   };
 
-  async endBattle() {
-    super.endBattle();
+  async endBattle(deleteMessage: boolean = false) {
+    super.endBattle(deleteMessage);
     this.teamGuest.forEach((unit) => {
       // Saves all players' characters
-      (unit as IPlayerDocument).statistics.pve.battles++;
-      (unit as IPlayerDocument).saveWithRetries();
+      (unit as Character).incrementBattleStatistics();
+      (unit as Character).save();
     });
   }
 
@@ -51,13 +52,13 @@ export class NPCBattle extends BattleGround {
     this.cleanLeaveBattleListener();
   };
 
-  leaveBattle = () => {
+  _leaveBattle() {
     this.teamHost.forEach((unit) => {
       this.battleLog.leftBattle(unit);
     });
 
-    this.endBattle();
-  };
+    this.endBattle(true);
+  }
 
   sendBattleMessage = async () => {
     super.sendBattleMessage();
@@ -65,9 +66,19 @@ export class NPCBattle extends BattleGround {
     this.bot.on("callback_query", this.onJoinCallbackQuery);
   };
 
+  _handleDeath(unit: IUnit) {
+    super._handleDeath(unit);
+
+    // Give rewards if it was NPC who died
+    const isUnitTeamHost = this.teamHost.includes(unit);
+    if (isUnitTeamHost && this.lastHitBy) {
+      this.rewardPlayers(unit as Enemy, this.lastHitBy);
+    }
+  }
+
   onJoinCallbackQuery = async (callbackQuery: TelegramBot.CallbackQuery) => {
     const callbackData = CallbackData.fromJson(callbackQuery.data);
-    if (this.getAverageHP(SIDE.HOST) < 50) {
+    if (this._getAverageHP(SIDE.HOST) < 50) {
       const optsCall: TelegramBot.AnswerCallbackQueryOptions = {
         callback_query_id: callbackQuery.id,
         text: "You can't join when HP is less then 50%",
@@ -80,21 +91,23 @@ export class NPCBattle extends BattleGround {
 
     if (callbackData.payload === this.id && callbackData.action === CallbackActions.JOIN_FIGHT) {
       // Fetches character
-      const player: IPlayerDocument | undefined = CharacterPool.getInstance().getOne({
+      const characterDoc: IPlayerDocument | undefined = CharacterPool.getInstance().getOne({
         chatId: this.chatId,
         telegramId: callbackQuery.from.id,
       });
-      logger.debug(player);
-      if (player === undefined) {
+
+      if (characterDoc === undefined) {
         return;
       }
+
+      const character = new Character(characterDoc);
 
       // Checks if the unit is already in the team
       if (
         this.teamGuest.findIndex((unit) => {
           return (
-            (unit as IPlayerDocument).telegram_id === player?.telegram_id &&
-            (unit as IPlayerDocument).chat_id === player.chat_id
+            (unit as Character).getTelegramId() === character.getTelegramId() &&
+            (unit as Character).getChatId() === character.getChatId()
           );
         }) !== -1
       ) {
@@ -109,17 +122,17 @@ export class NPCBattle extends BattleGround {
       } else {
         let optsCall: TelegramBot.AnswerCallbackQueryOptions;
         // Checks that unit is alive
-        if (player.isAlive()) {
+        if (characterDoc.isAlive()) {
           if (!this.isFightInProgress) {
             this.startFight();
           }
 
-          this.addToTeamGuest(player);
-          player.startAttacking();
+          this.addToTeamGuest(character);
+          character.startAttacking();
 
-          this.battleLog.unitJoined(player);
+          this.battleLog.unitJoined(character);
 
-          logger.verbose(`Player ${player?.name} joined the fight in ${this.chatId}`);
+          logger.verbose(`Player ${characterDoc?.name} joined the fight in ${this.chatId}`);
 
           optsCall = {
             callback_query_id: callbackQuery.id,
@@ -139,61 +152,16 @@ export class NPCBattle extends BattleGround {
     }
   };
 
-  handleAttack = async (attacker: IUnit) => {
-    logger.debug("Handling attack by " + attacker.getName());
-
-    // Handle attack only if there are units on both sides
-    if (this.isAnyoneAlive(this.teamGuest) && this.isAnyoneAlive(this.teamHost)) {
-      const isUnitTeamGuest = this.teamGuest.includes(attacker);
-
-      let target: IUnit;
-      // Picks random ALIVE target
-      do {
-        if (isUnitTeamGuest) {
-          target = this.teamHost[getRandomInt(0, this.teamHost.length)];
-        } else {
-          target = this.teamGuest[getRandomInt(0, this.teamGuest.length)];
-        }
-      } while (!target.isAlive());
-
-      // Handles attack
-      const dmgDealt = attacker.attack(target);
-      //this.lastHitBy = attacker;
-
-      this.battleLog.attacked(attacker, target, dmgDealt, isUnitTeamGuest ? "🔹" : "🔸");
-
-      // Records target's death
-      if (!target.isAlive()) {
-        logger.debug(`${target.getName()} died`);
-
-        this.battleLog.killed(attacker, target);
-
-        if (isUnitTeamGuest) {
-          await this.rewardPlayers(target as Enemy, attacker);
-        }
-
-        this.cleanUpUnit(target);
-      }
-
-      // End battle if there are no alive units on any side
-      if (!(this.isAnyoneAlive(this.teamGuest) && this.isAnyoneAlive(this.teamHost))) {
-        logger.debug(`No one is alive in one of the teams, ending the battle`);
-
-        this.endBattle();
-      }
-    }
-  };
-
   cleanLeaveBattleListener = () => {
-    this.removeListener(BattleEvents.LEAVE_BATTLE, this.leaveBattle);
+    this.removeListener(BattleEvents.LEAVE_BATTLE, this._leaveBattle);
     if (this.leaveBattleTimer) {
-      clearInterval(this.leaveBattleTimer);
+      clearTimeout(this.leaveBattleTimer);
       this.leaveBattleTimer = undefined;
     }
   };
 
-  cleanUp = () => {
-    super.cleanUp();
+  _cleanUp = () => {
+    super._cleanUp();
 
     this.bot.removeListener("callback_query", this.onJoinCallbackQuery);
 
@@ -207,13 +175,13 @@ export class NPCBattle extends BattleGround {
     const money = unitKilled.moneyOnDeath;
     const exp = unitKilled.expOnDeath;
 
-    const numberAlive = this.getNumberOfAliveUnits(SIDE.GUEST);
+    const numberAlive = this._getNumberOfAliveUnits(SIDE.GUEST);
     logger.debug(`Alive ${numberAlive}`);
 
     if (numberAlive === 1) {
-      (lastHitBy as IPlayerDocument).gainXP(exp);
-      (lastHitBy as IPlayerDocument).money += money;
-      (lastHitBy as IPlayerDocument).statistics.pve.last_hits++;
+      (lastHitBy as Character).gainXP(exp);
+      (lastHitBy as Character).gainMoney(money);
+      (lastHitBy as Character).incrementLastHitStatistics();
 
       this.battleLog.lastHitDrop(lastHitBy, unitKilled, exp, money);
     } else {
@@ -226,12 +194,12 @@ export class NPCBattle extends BattleGround {
       for (const unit of this.teamGuest) {
         if (unit.isAlive()) {
           if (unit === lastHitBy) {
-            (unit as IPlayerDocument).gainXP(expLastHit);
-            (unit as IPlayerDocument).money += moneyLastHit;
+            (unit as Character).gainXP(expLastHit);
+            (unit as Character).gainMoney(moneyLastHit);
             this.battleLog.lastHitDrop(lastHitBy, unitKilled, expLastHit, moneyLastHit);
           } else {
-            (unit as IPlayerDocument).gainXP(expPerUnit);
-            (unit as IPlayerDocument).money += moneyPerUnit;
+            (unit as Character).gainXP(expPerUnit);
+            (unit as Character).gainMoney(moneyPerUnit);
             unitsRewarded.push(unit);
           }
         }
@@ -242,8 +210,8 @@ export class NPCBattle extends BattleGround {
     const itemDrop = await unitKilled.getDropItem();
 
     if (itemDrop) {
-      const rndUnit = this.getRandomUnit(SIDE.GUEST, true);
-      await (rndUnit as IPlayerDocument).addItemToInventory(itemDrop);
+      const rndUnit = this._getRandomUnit(SIDE.GUEST, true);
+      (rndUnit as Character).addItemToInventory(itemDrop);
       this.battleLog.itemDropped(rndUnit, itemDrop.name);
     }
   };

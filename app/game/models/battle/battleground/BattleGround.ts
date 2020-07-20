@@ -9,6 +9,7 @@ import { CallbackData } from "../../CallbackData";
 import { CallbackActions } from "../../../misc/CallbackConstants";
 import { logger } from "../../../../utils/logger";
 import { getRandomInt } from "../../../../utils/utils";
+import { Engine } from "../../../Engine";
 
 const UPDATE_DELAY = 5000;
 export enum SIDE {
@@ -29,6 +30,9 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
   lastHitBy?: IUnit;
   isFightInProgress: boolean = false;
 
+  // Engine
+  _engine: Engine;
+
   constructor({ chatId, bot }: { chatId: number; bot: TelegramBot }) {
     super();
     this.id = Date.now();
@@ -38,20 +42,27 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
     this.teamHost = [];
     this.battleLog = new BattleLog();
 
-    this.addListener(BattleEvents.UPDATE_MESSAGE, this.handleUpdate);
+    this.addListener(BattleEvents.UPDATE_MESSAGE, this._handleUpdate);
     this.updateTimer = setInterval(() => this.emit(BattleEvents.UPDATE_MESSAGE), UPDATE_DELAY);
+
+    // Engine
+    this._engine = new Engine();
+    this._engine.start();
   }
 
   addToTeamGuest = (unit: IUnit) => {
     this.teamGuest.push(unit);
-    unit.isInFight = true;
-    unit.addListener(BattleEvents.UNIT_ATTACKS, () => this.handleAttack(unit));
+    // Add to game loop
+    this._engine.add(unit);
+    unit.addListener(BattleEvents.UNIT_ATTACKS, () => this._handleAttack(unit));
+    unit.addListener(BattleEvents.UNIT_DIED, () => this._handleDeath(unit));
   };
 
   addToTeamHost = (unit: IUnit) => {
     this.teamHost.push(unit);
-    unit.isInFight = true;
-    unit.addListener(BattleEvents.UNIT_ATTACKS, () => this.handleAttack(unit));
+    this._engine.add(unit);
+    unit.addListener(BattleEvents.UNIT_ATTACKS, () => this._handleAttack(unit));
+    unit.addListener(BattleEvents.UNIT_DIED, () => this._handleDeath(unit));
   };
 
   /**
@@ -61,27 +72,33 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
     this.sendBattleMessage();
   }
 
-  async endBattle() {
+  async endBattle(deleteMessage = false) {
     this.isFightInProgress = false;
     logger.debug("Battle ends, cleaning up...");
 
-    this.battleLog.battleEnd(this.isAnyoneAlive(this.teamGuest) ? SIDE.GUEST : SIDE.HOST);
-    this.cleanUp();
-    await this.battleLog.postBattleLog(this.getBattleInfo());
-    this.handleUpdate(true);
+    this.battleLog.battleEnd(this._isAnyoneAlive(this.teamGuest) ? SIDE.GUEST : SIDE.HOST);
+    this._cleanUp();
+    if (!deleteMessage) {
+      await this.battleLog.postBattleLog(this._getBattleInfo());
+      this._handleUpdate(true);
+    } else {
+      if (this.message) this.bot.deleteMessage(this.chatId, this.message.message_id.toString());
+    }
     this.emit(BattleEvents.BATTLE_ENDED);
     this.removeAllListeners();
   }
 
-  public cleanUp() {
+  public _cleanUp() {
     [...this.teamHost, ...this.teamGuest].forEach((unit) => {
       logger.debug("Cleaning up " + unit.getName());
-      this.cleanUpUnit(unit);
+      this._cleanUpUnit(unit);
     });
     if (this.updateTimer) {
       clearInterval(this.updateTimer);
       this.updateTimer = undefined;
     }
+
+    this._engine.dispose();
   }
 
   // Starts attacks for all units
@@ -95,104 +112,44 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
   }
 
   async sendBattleMessage() {
-    const callbackData = new CallbackData({
-      action: CallbackActions.JOIN_FIGHT,
-      telegram_id: undefined,
-      payload: this.id,
-    });
-
-    const opts: TelegramBot.SendMessageOptions = {
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: "Join fight",
-              callback_data: callbackData.toJson(),
-            },
-          ],
-        ],
-      },
-    };
-
-    const messageText = `${this.getBattleInfo()}\n\n${
+    const messageText = `${this._getBattleInfo()}\n\n${
       this.battleLog.hasRecords() ? this.battleLog.getBattleLog() : ""
     }`;
     this.previousMessageText = messageText;
-    this.message = await this.bot.sendMessage(this.chatId, messageText, opts);
+    this.message = await this.bot.sendMessage(this.chatId, messageText, this._getSendMessageOpts());
   }
 
-  handleAttack = async (unit: IUnit) => {
-    logger.debug("Handling attack by " + unit.getName());
+  _handleAttack(unit: IUnit) {
+    logger.verbose("Handling attack by " + unit.getName());
 
-    // Handle attack only if there are units on both sides
-    if (this.isAnyoneAlive(this.teamGuest) && this.isAnyoneAlive(this.teamHost)) {
-      const isUnitTeamA = this.teamGuest.includes(unit);
+    const isUnitTeamGuest = this.teamGuest.includes(unit);
+    this.lastHitBy = unit;
+    const attackDetails = unit.attack(isUnitTeamGuest ? this.teamHost : this.teamGuest);
+    this.battleLog.attacked(unit, attackDetails, isUnitTeamGuest ? "🔹" : "🔸");
 
-      let target: IUnit;
-      // Picks random ALIVE target
-      do {
-        if (isUnitTeamA) {
-          target = this.teamHost[getRandomInt(0, this.teamHost.length)];
-        } else {
-          target = this.teamGuest[getRandomInt(0, this.teamGuest.length)];
-        }
-      } while (!target.isAlive());
-
-      // Hadnles attack
-      const dmgDealt = unit.attack(target);
-      this.lastHitBy = unit;
-
-      this.battleLog.attacked(unit, target, dmgDealt, isUnitTeamA ? "🔹" : "🔸");
-
-      // Records target's death
-      if (!target.isAlive()) {
-        logger.debug(`${target.getName()} died`);
-
-        this.battleLog.killed(unit, target);
-
-        this.cleanUpUnit(target);
-      }
-
-      // End battle if there are no alive units on any side
-      if (!(this.isAnyoneAlive(this.teamGuest) && this.isAnyoneAlive(this.teamHost))) {
-        logger.debug(`No one is alive in one of the teams, ending the battle`);
-
-        this.endBattle();
-      }
+    if (attackDetails.target && !attackDetails.target.isAlive()) {
+      this.battleLog.killed(attackDetails.target);
     }
-  };
 
-  handleUpdate(hideMarkup: boolean = false) {
+    // End battle if there are no alive units on any side
+    if (!(this._isAnyoneAlive(this.teamGuest) && this._isAnyoneAlive(this.teamHost))) {
+      logger.debug(`No one is alive in one of the teams, ending the battle`);
+
+      this.endBattle();
+    }
+  }
+
+  _handleDeath(unit: IUnit) {
+    this._cleanUpUnit(unit);
+  }
+
+  _handleUpdate(hideMarkup: boolean = false) {
     if (this.message !== undefined) {
-      const callbackData = new CallbackData({
-        action: CallbackActions.JOIN_FIGHT,
-        telegram_id: undefined,
-        payload: this.id,
-      });
-
-      const opts: TelegramBot.EditMessageTextOptions = {
-        parse_mode: "HTML",
-        chat_id: this.chatId,
-        message_id: this.message.message_id,
-        disable_web_page_preview: true,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: "Join fight",
-                callback_data: callbackData.toJson(),
-              },
-            ],
-          ],
-        },
-      };
-
+      const opts = this._getEditMessageOpts();
       if (hideMarkup) {
         delete opts.reply_markup;
       }
-
-      const messageText = `${this.getBattleInfo()}\n\n${
+      const messageText = `${this._getBattleInfo()}\n\n${
         this.battleLog.hasRecords() ? this.battleLog.getBattleLog() : ""
       }`;
       // Only edit message if the text actually changed
@@ -203,7 +160,7 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
     }
   }
 
-  getBattleInfo = (): string => {
+  _getBattleInfo = (): string => {
     let battleInfoText = `<b>⚜️⚜️⚜️BATTLE⚜️⚜️⚜️</b>\n\n`;
 
     battleInfoText += `<b>Side</b> 🟠\n`;
@@ -224,30 +181,80 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
     return battleInfoText;
   };
 
-  cleanUpUnit = (unit: IUnit) => {
-    unit.isInFight = false;
-    unit.stopAttacking();
-    unit.removeListener(BattleEvents.UNIT_ATTACKS, this.handleAttack);
+  _getSendMessageOpts = () => {
+    const callbackData = new CallbackData({
+      action: CallbackActions.JOIN_FIGHT,
+      telegram_id: undefined,
+      payload: this.id,
+    });
+
+    const opts: TelegramBot.SendMessageOptions = {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Join fight",
+              callback_data: callbackData.toJson(),
+            },
+          ],
+        ],
+      },
+    };
+
+    return opts;
   };
 
-  isAnyoneAlive = (units: IUnit[]): boolean => {
+  _getEditMessageOpts = () => {
+    const callbackData = new CallbackData({
+      action: CallbackActions.JOIN_FIGHT,
+      telegram_id: undefined,
+      payload: this.id,
+    });
+
+    const opts: TelegramBot.EditMessageTextOptions = {
+      parse_mode: "HTML",
+      chat_id: this.chatId,
+      message_id: this.message?.message_id,
+      disable_web_page_preview: true,
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Join fight",
+              callback_data: callbackData.toJson(),
+            },
+          ],
+        ],
+      },
+    };
+
+    return opts;
+  };
+
+  _cleanUpUnit = (unit: IUnit) => {
+    unit.stopAttacking();
+    unit.removeAllListeners();
+  };
+
+  _isAnyoneAlive = (units: IUnit[]): boolean => {
     return units.some((unit) => unit.isAlive());
   };
 
-  getRandomUnit = (side: SIDE, isAlive: boolean = false): IUnit => {
+  _getRandomUnit = (side: SIDE, isAlive: boolean = false): IUnit => {
     let unit: IUnit;
 
     switch (side) {
       case SIDE.GUEST: {
         do {
           unit = this.teamGuest[getRandomInt(0, this.teamGuest.length)];
-        } while (isAlive && this.isAnyoneAlive(this.teamGuest) && !unit.isAlive());
+        } while (isAlive && this._isAnyoneAlive(this.teamGuest) && !unit.isAlive());
         break;
       }
       case SIDE.HOST: {
         do {
           unit = this.teamHost[getRandomInt(0, this.teamHost.length)];
-        } while (isAlive && this.isAnyoneAlive(this.teamHost) && !unit.isAlive());
+        } while (isAlive && this._isAnyoneAlive(this.teamHost) && !unit.isAlive());
         break;
       }
     }
@@ -255,7 +262,7 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
     return unit;
   };
 
-  getNumberOfAliveUnits = (side: SIDE): number => {
+  _getNumberOfAliveUnits = (side: SIDE): number => {
     let count = 0;
     switch (side) {
       case SIDE.GUEST: {
@@ -279,7 +286,7 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
     return count;
   };
 
-  getAverageLevel = (side: SIDE) => {
+  _getAverageLevel = (side: SIDE) => {
     let averageLevel = 0;
     switch (side) {
       case SIDE.GUEST: {
@@ -296,7 +303,7 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
     return averageLevel;
   };
 
-  getAverageHP = (side: SIDE) => {
+  _getAverageHP = (side: SIDE) => {
     let averageHP = 0;
     let maxHP = 0;
     switch (side) {
