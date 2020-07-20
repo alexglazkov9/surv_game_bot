@@ -20,6 +20,7 @@ import {
 } from "../../../database/items/items.types";
 import { ItemType } from "../../misc/ItemType";
 import { AttackDetails, AttackModifier } from "../../misc/AttackDetails";
+import { IUpdatable } from "../../IUpdatable";
 
 const UPDATE_DELAY = 5000;
 const ATTACK_CHAT_EVENT = "attack_chat_event";
@@ -28,7 +29,7 @@ const ATTACK_BY_PLAYER = "attack_by_player";
 const UPDATE_EVENT = "update_event";
 export const ON_DEATH_EVENT = "ON_DEATH_EVENT";
 
-export class Enemy extends EventEmitter.EventEmitter implements IUnit {
+export class Enemy extends EventEmitter.EventEmitter implements IUpdatable, IUnit {
   id: number;
   bot: TelegramBot;
   chatId: number;
@@ -37,7 +38,7 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
   level: number;
 
   // STATS
-  base_hp: number;
+  baseHp: number;
   hp: number;
   damage: number;
   baseAttackSpeed: number;
@@ -49,7 +50,9 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
   critChance: number;
   attackSpeed: number;
 
-  isInFight: boolean = false;
+  // Attack handling
+  _isAttacking: boolean = false;
+  _nextAttackTime: number = 0;
 
   // DROP
   expOnDeath: number;
@@ -57,11 +60,7 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
   itemDropChance: any[];
 
   // FUNCTIONAL
-  messageId?: number;
-  attackSpeedPreFight: number;
   attackRateInFight: number;
-  attackTimer?: NodeJS.Timeout;
-  attackFightTimer?: NodeJS.Timeout;
 
   constructor({
     bot,
@@ -117,7 +116,7 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
     this.level = level;
 
     // STATS
-    this.base_hp = hp;
+    this.baseHp = hp;
     this.hp = hp + stamina * GameParams.STAMINA_TO_HEALTH_MULTIPLIER;
     this.damage = damage;
     this.armor = armor;
@@ -134,7 +133,6 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
     this.moneyOnDeath = money_on_death;
     this.itemDropChance = item_drop_chance;
 
-    this.attackSpeedPreFight = attack_rate_minutes * 60 * 1000;
     this.attackRateInFight = attack_rate_fight;
   }
 
@@ -174,6 +172,11 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
       attack_rate_fight: json.attack_rate_fight,
     });
     return enemy;
+  };
+
+  update = (delta: number) => {
+    this._nextAttackTime -= delta;
+    this._tryAttack();
   };
 
   getDropItem = async (): Promise<IItemDocument | null> => {
@@ -234,51 +237,43 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
             `;
   };
 
-  clearAllIntervals = (): void => {
-    if (this.attackFightTimer !== undefined) {
-      clearInterval(this.attackFightTimer);
-    }
-
-    if (this.attackTimer !== undefined) {
-      clearInterval(this.attackTimer);
-    }
-  };
+  clearAllIntervals = (): void => {};
 
   // Unit interface methods
   startAttacking = () => {
-    if (this.attackTimer !== undefined) {
-      this.stopAttacking();
-    }
-    this.attackTimer = setInterval(
-      () => this.emit(BattleEvents.UNIT_ATTACKS),
-      this.getAttackSpeedDelay()
-    );
+    this._nextAttackTime = this.getAttackSpeedDelay();
+    this._isAttacking = true;
   };
 
   stopAttacking = (): void => {
-    if (this.attackTimer !== undefined) {
-      clearInterval(this.attackTimer);
-      this.attackTimer = undefined;
-    }
+    this._isAttacking = false;
   };
 
-  attack = (target: IUnit): AttackDetails => {
-    const dmgDealt = target.takeDamage(this.getAttackDamage());
-    return dmgDealt;
+  attack = (targets: IUnit[]): AttackDetails => {
+    let target: IUnit;
+    do {
+      target = targets[getRandomInt(0, targets.length)];
+    } while (!target.isAlive());
+
+    let attackDetails = new AttackDetails();
+    attackDetails.target = target;
+    attackDetails = target.takeDamage(this.getAttackDamage(attackDetails));
+
+    return attackDetails;
   };
 
-  getAttackDamage = (): AttackDetails => {
-    let modifier = AttackModifier.NORMAL;
-    let damage =
+  getAttackDamage = (attackDetails: AttackDetails): AttackDetails => {
+    attackDetails.modifier = AttackModifier.NORMAL;
+    attackDetails.damageDealt =
       this.damage * (1 + this.strength / (GameParams.STRENGTH_TO_DAMAGE_WEIGHT + this.strength));
 
     // Apply crit damage
     if (Math.random() < this.getCritChance()) {
-      damage *= GameParams.DEFAULT_CRIT_MULTIPLIER;
-      modifier = AttackModifier.CRITICAL_STRIKE;
+      attackDetails.damageDealt *= GameParams.DEFAULT_CRIT_MULTIPLIER;
+      attackDetails.modifier = AttackModifier.CRITICAL_STRIKE;
     }
 
-    return new AttackDetails({ damageDealt: damage, modifier });
+    return attackDetails;
   };
 
   getCritChance = () => {
@@ -337,7 +332,7 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
 
     this.hp -= totalDamage;
     if (this.hp < 0) {
-      this.hp = 0;
+      this._die();
     }
     attack.damageDealt = totalDamage;
 
@@ -370,10 +365,25 @@ export class Enemy extends EventEmitter.EventEmitter implements IUnit {
   };
 
   getMaxHP = (): number => {
-    return this.base_hp + this.stamina * GameParams.STAMINA_TO_HEALTH_MULTIPLIER;
+    return this.baseHp + this.stamina * GameParams.STAMINA_TO_HEALTH_MULTIPLIER;
   };
 
   getHP = (): number => {
     return this.hp;
+  };
+
+  _die(){
+    logger.verbose(`${this.getName()} dies`);
+    this.hp = 0;
+    this.emit(BattleEvents.UNIT_DIED);
+  }
+
+  _tryAttack = () => {
+    if (this._isAttacking) {
+      if (this._nextAttackTime <= 0) {
+        this.emit(BattleEvents.UNIT_ATTACKS);
+        this._nextAttackTime = this.getAttackSpeedDelay();
+      }
+    }
   };
 }

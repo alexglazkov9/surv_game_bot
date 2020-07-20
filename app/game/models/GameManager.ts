@@ -22,6 +22,8 @@ import { getRandomInt } from "../../utils/utils";
 import { IWeaponDocument, IArmorDocument, IArmor, IWeapon } from "../../database/items/items.types";
 import { Mongoose, mongo, Types } from "mongoose";
 import cron = require("node-cron");
+import { Character } from "./units/Character";
+import { PlayerModel } from "../../database/players/players.model";
 
 const AUTO_DELETE_DELAY = 5000;
 
@@ -429,8 +431,8 @@ export class GameManager {
     });
   };
 
-  duel = async (charcater: IPlayerDocument, wager: number) => {
-    this.gameInstances[charcater.chat_id]?.startDuel(charcater, wager);
+  duel = async (charcaterDoc: IPlayerDocument, wager: number) => {
+    this.gameInstances[charcaterDoc.chat_id]?.startDuel(new Character(charcaterDoc), wager);
   };
 
   setUpShopRefresher = () => {
@@ -447,7 +449,7 @@ export class GameManager {
   };
 
   refreshShop = async () => {
-    //Weapon
+    // Weapon
     await ShopWeaponModel.deleteMany({});
     const weaponCount = await WeaponModel.countDocuments({}).exec();
     const weapons: IWeapon[] = [];

@@ -49,7 +49,7 @@ export interface IPlayer {
   };
 }
 
-export interface IPlayerDocument extends IPlayer, Document, IUnit {
+export interface IPlayerDocument extends IPlayer, Document {
   // Stats
   getStamina: (this: IPlayerDocument) => number;
   getAgility: (this: IPlayerDocument) => number;

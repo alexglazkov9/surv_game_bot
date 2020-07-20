@@ -435,7 +435,7 @@ export function getAttackDamage(
     }
   }
 
-  return new AttackDetails({ damageDealt: damage, modifier });
+  return new AttackDetails();
 }
 
 export function getBaseAttackSpeed(this: IPlayerDocument): number {
@@ -458,20 +458,20 @@ export function attack(this: IPlayerDocument, target: IUnit): AttackDetails {
 }
 
 export function startAttacking(this: IPlayerDocument) {
-  if (this.attackTimer !== undefined) {
-    this.stopAttacking();
-  }
-  this.attackTimer = setInterval(
-    () => this.emit(BattleEvents.UNIT_ATTACKS),
-    this.getAttackSpeedDelay()
-  );
+  // if (this.attackTimer !== undefined) {
+  //   this.stopAttacking();
+  // }
+  // this.attackTimer = setInterval(
+  //   () => this.emit(BattleEvents.UNIT_ATTACKS),
+  //   this.getAttackSpeedDelay()
+  // );
 }
 
 export function stopAttacking(this: IPlayerDocument) {
-  if (this.attackTimer !== undefined) {
-    clearInterval(this.attackTimer);
-    this.attackTimer = undefined;
-  }
+  // if (this.attackTimer !== undefined) {
+  //   clearInterval(this.attackTimer);
+  //   this.attackTimer = undefined;
+  // }
 }
 
 export function getShortStats(this: IPlayerDocument, isDead: boolean = false): string {

@@ -1,14 +1,14 @@
-import { IBattleGround } from "./IBattleGround";
 import { BattleGround } from "./BattleGround";
 import TelegramBot from "node-telegram-bot-api";
-import { IPlayerDocument, IPlayer } from "../../../../database/players/players.types";
 import { CallbackData } from "../../CallbackData";
 import { CallbackActions } from "../../../misc/CallbackConstants";
-import { PlayerModel } from "../../../../database/players/players.model";
 import { logger } from "../../../../utils/logger";
 import { BattleEvents } from "../BattleEvents";
 import { IndicatorsEmojis } from "../../../misc/IndicatorsEmojis";
 import { CharacterPool } from "../../CharacterPool";
+import { IUnit } from "../../units/IUnit";
+import _ = require("lodash");
+import { Character } from "../../units/Character";
 
 const LEAVE_DELAY = 15 * 1000;
 
@@ -16,6 +16,8 @@ export class Duel extends BattleGround {
   prizeMoney: number = 0;
   hideMarkup: boolean = false;
   leaveBattleTimer?: NodeJS.Timeout;
+  teamHostBackup: IUnit[];
+  teamGuestBackup: IUnit[];
 
   constructor({
     chatId,
@@ -28,55 +30,69 @@ export class Duel extends BattleGround {
   }) {
     super({ chatId, bot });
 
+    this.teamHostBackup = [];
+    this.teamGuestBackup = [];
+
     this.prizeMoney = prizeMoney;
     this.addListener(BattleEvents.LEAVE_BATTLE, this.leaveBattle);
     this.leaveBattleTimer = setInterval(() => this.emit(BattleEvents.LEAVE_BATTLE), LEAVE_DELAY);
   }
 
+  addToTeamGuest = (unit: IUnit) => {
+    this.teamGuestBackup.push(unit);
+    // Copying unit to prevent actual character from dying in the duel
+    const unitCopy: Character = _.cloneDeep(unit as Character);
+    unitCopy.setHP(unitCopy.getMaxHP());
+    this.teamGuest.push(unitCopy);
+    // Add to game loop
+    this._engine.add(unitCopy);
+    unitCopy.addListener(BattleEvents.UNIT_ATTACKS, () => this._handleAttack(unitCopy));
+    unitCopy.addListener(BattleEvents.UNIT_DIED, () => this._handleDeath(unitCopy));
+  };
+
+  addToTeamHost = (unit: IUnit) => {
+    this.teamHostBackup.push(unit);
+    // Copying unit to prevent actual character from dying in the duel
+    const unitCopy: Character = _.cloneDeep(unit as Character);
+    unitCopy.setHP(unitCopy.getMaxHP());
+    this.teamHost.push(unitCopy);
+    // Add to game loop
+    this._engine.add(unitCopy);
+    unitCopy.addListener(BattleEvents.UNIT_ATTACKS, () => this._handleAttack(unitCopy));
+    unitCopy.addListener(BattleEvents.UNIT_DIED, () => this._handleDeath(unitCopy));
+  };
+
   initBattle = async () => {
-    // Give full hp to all
-    [...this.teamHost, ...this.teamGuest].forEach((unit) => {
-      (unit as IPlayerDocument).health_points = (unit as IPlayerDocument).getMaxHP();
-    });
     this.sendBattleMessage();
   };
 
   startFight = () => {
     super.startFight();
+    this.cleanLeaveBattleListener();
   };
 
-  endBattle = async () => {
+  endBattle = async (deleteMessage: boolean = false) => {
     // Give away wagers
     if (this.teamGuest.length > 0) {
-      if (this.isAnyoneAlive(this.teamGuest)) {
-        await (this.teamGuest[0] as IPlayerDocument).update({
-          money: (this.teamGuest[0] as IPlayerDocument).money + this.prizeMoney,
-          statisctics: {
-            duels: { won: (this.teamGuest[0] as IPlayerDocument).statistics.duels.won + 1 },
-          },
-        });
-        await (this.teamHost[0] as IPlayerDocument).update({
-          money: (this.teamHost[0] as IPlayerDocument).money - this.prizeMoney,
-          statisctics: {
-            duels: { lost: (this.teamHost[0] as IPlayerDocument).statistics.duels.lost + 1 },
-          },
-        });
+      if (this._isAnyoneAlive(this.teamGuest)) {
+        (this.teamGuestBackup[0] as Character).gainMoney(this.prizeMoney);
+        (this.teamGuestBackup[0] as Character).incrementDuelsWon();
+
+        (this.teamHostBackup[0] as Character).gainMoney(-this.prizeMoney);
+        (this.teamHostBackup[0] as Character).incrementDuelsLost();
+
         this.battleLog.wagerWon(this.teamGuest[0], this.prizeMoney);
       } else {
-        await (this.teamGuest[0] as IPlayerDocument).update({
-          money: (this.teamGuest[0] as IPlayerDocument).money - this.prizeMoney,
-          statisctics: {
-            duels: { lost: (this.teamGuest[0] as IPlayerDocument).statistics.duels.lost + 1 },
-          },
-        });
-        await (this.teamHost[0] as IPlayerDocument).update({
-          money: (this.teamHost[0] as IPlayerDocument).money + this.prizeMoney,
-          statisctics: {
-            duels: { won: (this.teamGuest[0] as IPlayerDocument).statistics.duels.won + 1 },
-          },
-        });
-        this.battleLog.wagerWon(this.teamHost[0], this.prizeMoney);
+        (this.teamHostBackup[0] as Character).gainMoney(this.prizeMoney);
+        (this.teamHostBackup[0] as Character).incrementDuelsWon();
+
+        (this.teamGuestBackup[0] as Character).gainMoney(-this.prizeMoney);
+        (this.teamGuestBackup[0] as Character).incrementDuelsLost();
+
+        this.battleLog.wagerWon(this.teamGuest[0], this.prizeMoney);
       }
+      (this.teamHostBackup[0] as Character).save();
+      (this.teamGuestBackup[0] as Character).save();
     }
 
     super.endBattle();
@@ -87,7 +103,7 @@ export class Duel extends BattleGround {
     this.teamHost.forEach((unit) => {
       this.battleLog.leftDuel(unit);
     });
-    this.endBattle();
+    this.endBattle(true);
   };
 
   sendBattleMessage = async () => {
@@ -100,7 +116,7 @@ export class Duel extends BattleGround {
     // Checks that host is not joining itself
     if (
       this.teamHost.some((unit) => {
-        return (unit as IPlayerDocument).telegram_id === callbackQuery.from.id;
+        return (unit as Character).getTelegramId() === callbackQuery.from.id;
       })
     ) {
       return;
@@ -129,8 +145,8 @@ export class Duel extends BattleGround {
       if (
         this.teamGuest.findIndex((unit) => {
           return (
-            (unit as IPlayerDocument).telegram_id === player?.telegram_id &&
-            (unit as IPlayerDocument).chat_id === player.chat_id
+            (unit as Character).getTelegramId() === player?.telegram_id &&
+            (unit as Character).getChatId() === player.chat_id
           );
         }) !== -1
       ) {
@@ -153,8 +169,8 @@ export class Duel extends BattleGround {
       } else {
         // Checks that player is alive
         if (player.isAlive()) {
-          (player as IPlayerDocument).health_points = (player as IPlayerDocument).getMaxHP();
-          this.addToTeamGuest(player);
+          const character = new Character(player);
+          this.addToTeamGuest(character);
 
           // Hiding markup after first player joined
           this.hideMarkup = true;
@@ -164,7 +180,7 @@ export class Duel extends BattleGround {
 
           this.startFight();
 
-          this.battleLog.unitJoined(player);
+          this.battleLog.unitJoined(character);
           logger.verbose(`Player ${player?.name} joined the fight in ${this.chatId}`);
 
           optsCall = {
@@ -185,17 +201,13 @@ export class Duel extends BattleGround {
     }
   };
 
-  cleanUp = () => {
-    super.cleanUp();
+  _cleanUp = () => {
+    super._cleanUp();
 
     this.bot.removeListener("callback_query", this.onJoinCallbackQuery);
 
     this.cleanLeaveBattleListener();
   };
-
-  handleUpdate(hideMarkup: boolean = false) {
-    super.handleUpdate(this.hideMarkup);
-  }
 
   cleanLeaveBattleListener = () => {
     this.removeListener(BattleEvents.LEAVE_BATTLE, this.leaveBattle);
@@ -205,7 +217,7 @@ export class Duel extends BattleGround {
     }
   };
 
-  getBattleInfo = (): string => {
+  _getBattleInfo = (): string => {
     let battleInfoText = `<b>⚜️PVP DUEL⚜️</b>\n<pre>     </pre><b>Wager:</b> ${this.prizeMoney} <b>${IndicatorsEmojis.CURRENCY_MONEY}</b>\n\n`;
     battleInfoText += `<b>Side</b> 🟠\n`;
     this.teamHost.forEach((unit) => {

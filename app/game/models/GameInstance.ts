@@ -11,6 +11,7 @@ import { IUnit } from "./units/IUnit";
 import { Duel } from "./battle/battleground/Duel";
 import { CharacterPool } from "./CharacterPool";
 import { GameParams } from "../misc/GameParameters";
+import { Character } from "./units/Character";
 
 const RESPAWN_RATE = 60 * 60 * 1000;
 const HP_REGEN_RATE = 1 * 60 * 1000;
@@ -44,11 +45,11 @@ export class GameInstance {
     });
 
     duel.addToTeamHost(host);
+
     duel.initBattle();
     duel.addListener(BattleEvents.BATTLE_ENDED, () => {
       this.battleInProgress = undefined;
     });
-
     this.battleInProgress = duel;
   };
 
@@ -62,7 +63,7 @@ export class GameInstance {
 
   spawnEnemy = async (onlyOne: boolean = false) => {
     const enemy = await this.getRandomEnemy();
-    //const enemy2 = await this.getRandomEnemy(enemy.level);
+    // const enemy2 = await this.getRandomEnemy(enemy.level);
 
     const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
 
@@ -74,18 +75,19 @@ export class GameInstance {
     });
 
     battle.addToTeamHost(enemy);
-    //battle.addToTeamHost(enemy2);
+    // battle.addToTeamHost(enemy2);
 
     // 10% chance to instantly start fighting someone
     if (getRandomInt(0, 100) >= 90) {
-      let playerUnit;
+      let characterDoc;
       // Makes sure enemy attacks player of the same level
       do {
-        const players = CharacterPool.getInstance().getAllFromChat({ chatId: this.chatId });
-        playerUnit = players[getRandomInt(0, players.length)];
-      } while (Math.abs(playerUnit.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
+        const characterDocs = CharacterPool.getInstance().getAllFromChat({ chatId: this.chatId });
+        characterDoc = characterDocs[getRandomInt(0, characterDocs.length)];
+      } while (Math.abs(characterDoc.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
 
-      battle.addToTeamGuest(playerUnit);
+      const character = new Character(characterDoc);
+      battle.addToTeamGuest(character);
       battle.startFight();
     }
 
