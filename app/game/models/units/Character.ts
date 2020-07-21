@@ -7,6 +7,7 @@ import { AttackDetails, AttackModifier } from "../../misc/AttackDetails";
 import { getRandomInt } from "../../../utils/utils";
 import { IItemDocument } from "../../../database/items/items.types";
 import { logger } from "../../../utils/logger";
+import { IAbilityEffect } from "../abilities/Ability";
 
 export class Character extends EventEmitter.EventEmitter implements IUpdatable, IUnit {
   _doc: IPlayerDocument;
@@ -19,6 +20,8 @@ export class Character extends EventEmitter.EventEmitter implements IUpdatable, 
   _isAttacking: boolean = false;
   _nextAttackTime: number = 0;
 
+  _effects: IAbilityEffect[] = [];
+
   constructor(charcterDoc: IPlayerDocument) {
     super();
     this._doc = charcterDoc;
@@ -29,6 +32,12 @@ export class Character extends EventEmitter.EventEmitter implements IUpdatable, 
     this._nextAttackTime -= delta;
     this._tryAttack();
   }
+
+  addEffect(effect: IAbilityEffect): void {
+    this._effects.push(effect);
+  }
+
+  removeEffect(effect: IAbilityEffect): void {}
 
   attack(targets: IUnit[]): AttackDetails {
     let target: IUnit;
@@ -169,6 +178,7 @@ export class Character extends EventEmitter.EventEmitter implements IUpdatable, 
   _die() {
     logger.verbose(`${this.getName()} dies`);
     this._doc.health_points = 0;
+    this._isAttacking = false;
     this.emit(BattleEvents.UNIT_DIED);
   }
 }

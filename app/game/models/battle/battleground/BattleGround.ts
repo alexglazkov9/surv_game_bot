@@ -33,7 +33,7 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
   // Engine
   _engine: Engine;
 
-  constructor({ chatId, bot }: { chatId: number; bot: TelegramBot }) {
+  constructor({ chatId, bot, engine }: { chatId: number; bot: TelegramBot; engine: Engine }) {
     super();
     this.id = Date.now();
     this.chatId = chatId;
@@ -46,21 +46,20 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
     this.updateTimer = setInterval(() => this.emit(BattleEvents.UPDATE_MESSAGE), UPDATE_DELAY);
 
     // Engine
-    this._engine = new Engine();
-    this._engine.start();
+    this._engine = engine;
   }
 
   addToTeamGuest = (unit: IUnit) => {
     this.teamGuest.push(unit);
     // Add to game loop
-    this._engine.add(unit);
+    //this._engine.add(unit);
     unit.addListener(BattleEvents.UNIT_ATTACKS, () => this._handleAttack(unit));
     unit.addListener(BattleEvents.UNIT_DIED, () => this._handleDeath(unit));
   };
 
   addToTeamHost = (unit: IUnit) => {
     this.teamHost.push(unit);
-    this._engine.add(unit);
+    //this._engine.add(unit);
     unit.addListener(BattleEvents.UNIT_ATTACKS, () => this._handleAttack(unit));
     unit.addListener(BattleEvents.UNIT_DIED, () => this._handleDeath(unit));
   };
@@ -98,7 +97,7 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
       this.updateTimer = undefined;
     }
 
-    this._engine.dispose();
+    //this._engine.dispose();
   }
 
   // Starts attacks for all units
@@ -188,6 +187,12 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
       payload: this.id,
     });
 
+    const castAbilityCbData = new CallbackData({
+      action: CallbackActions.CAST_ABILITY_1,
+      telegram_id: undefined,
+      payload: this.id,
+    });
+
     const opts: TelegramBot.SendMessageOptions = {
       parse_mode: "HTML",
       reply_markup: {
@@ -196,6 +201,12 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
             {
               text: "Join fight",
               callback_data: callbackData.toJson(),
+            },
+          ],
+          [
+            {
+              text: "Ability 1",
+              callback_data: castAbilityCbData.toJson(),
             },
           ],
         ],
@@ -212,6 +223,12 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
       payload: this.id,
     });
 
+    const castAbilityCbData = new CallbackData({
+      action: CallbackActions.CAST_ABILITY_1,
+      telegram_id: undefined,
+      payload: this.id,
+    });
+
     const opts: TelegramBot.EditMessageTextOptions = {
       parse_mode: "HTML",
       chat_id: this.chatId,
@@ -223,6 +240,12 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
             {
               text: "Join fight",
               callback_data: callbackData.toJson(),
+            },
+          ],
+          [
+            {
+              text: "Ability 1",
+              callback_data: castAbilityCbData.toJson(),
             },
           ],
         ],

@@ -9,6 +9,7 @@ import { CharacterPool } from "../../CharacterPool";
 import { IUnit } from "../../units/IUnit";
 import _ = require("lodash");
 import { Character } from "../../units/Character";
+import { Engine } from "../../../Engine";
 
 const LEAVE_DELAY = 15 * 1000;
 
@@ -22,13 +23,15 @@ export class Duel extends BattleGround {
   constructor({
     chatId,
     bot,
+    engine,
     prizeMoney,
   }: {
     chatId: number;
     bot: TelegramBot;
+    engine: Engine;
     prizeMoney: number;
   }) {
-    super({ chatId, bot });
+    super({ chatId, bot, engine });
 
     this.teamHostBackup = [];
     this.teamGuestBackup = [];

@@ -12,6 +12,7 @@ import { Duel } from "./battle/battleground/Duel";
 import { CharacterPool } from "./CharacterPool";
 import { GameParams } from "../misc/GameParameters";
 import { Character } from "./units/Character";
+import { engine } from "../../app";
 
 const RESPAWN_RATE = 60 * 60 * 1000;
 const HP_REGEN_RATE = 1 * 60 * 1000;
@@ -41,6 +42,7 @@ export class GameInstance {
     const duel = new Duel({
       chatId: this.chatId,
       bot: this.bot,
+      engine,
       prizeMoney: wager,
     });
 
@@ -65,7 +67,7 @@ export class GameInstance {
     const enemy = await this.getRandomEnemy();
     // const enemy2 = await this.getRandomEnemy(enemy.level);
 
-    const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
+    const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot, engine });
 
     battle.addListener(BattleEvents.BATTLE_ENDED, () => {
       if (!onlyOne) {
