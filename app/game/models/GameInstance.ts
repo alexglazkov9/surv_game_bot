@@ -81,14 +81,13 @@ export class GameInstance {
 
     // 10% chance to instantly start fighting someone
     if (getRandomInt(0, 100) >= 90) {
-      let characterDoc;
+      let character;
       // Makes sure enemy attacks player of the same level
       do {
-        const characterDocs = CharacterPool.getInstance().getAllFromChat({ chatId: this.chatId });
-        characterDoc = characterDocs[getRandomInt(0, characterDocs.length)];
-      } while (Math.abs(characterDoc.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
+        const characters = CharacterPool.getInstance().getAllFromChat({ chatId: this.chatId });
+        character = characters[getRandomInt(0, characters.length)];
+      } while (Math.abs(character.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
 
-      const character = new Character(characterDoc);
       battle.addToTeamGuest(character);
       battle.startFight();
     }
@@ -155,7 +154,7 @@ export class GameInstance {
       alive: false,
     });
     players?.forEach((player) => {
-      player.revive();
+      player._doc.revive();
     });
 
     this.bot.sendMessage(this.chatId, `👼🏿All players have been respawned.`, {
@@ -176,7 +175,7 @@ export class GameInstance {
       alive: true,
     });
     players?.forEach((player) => {
-      player.passiveRegen(HP_REGEN_PERCENTAGE);
+      player._doc.passiveRegen(HP_REGEN_PERCENTAGE);
     });
   };
 

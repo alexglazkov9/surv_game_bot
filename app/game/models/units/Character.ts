@@ -7,7 +7,8 @@ import { AttackDetails, AttackModifier } from "../../misc/AttackDetails";
 import { getRandomInt } from "../../../utils/utils";
 import { IItemDocument } from "../../../database/items/items.types";
 import { logger } from "../../../utils/logger";
-import { IAbilityEffect } from "../abilities/Ability";
+import { IEffect } from "../abilities/IEffect";
+import { BattleGround } from "../battle/battleground/BattleGround";
 
 export class Character extends EventEmitter.EventEmitter implements IUpdatable, IUnit {
   _doc: IPlayerDocument;
@@ -15,12 +16,12 @@ export class Character extends EventEmitter.EventEmitter implements IUpdatable, 
   // IUnit
   level: number;
   isInFight: boolean = false;
+  _currentBattle?: BattleGround;
+  _effects: IEffect[] = [];
 
   // Attack handling
   _isAttacking: boolean = false;
   _nextAttackTime: number = 0;
-
-  _effects: IAbilityEffect[] = [];
 
   constructor(charcterDoc: IPlayerDocument) {
     super();
@@ -28,16 +29,16 @@ export class Character extends EventEmitter.EventEmitter implements IUpdatable, 
     this.level = this._doc.level;
   }
 
-  update(delta: number) {
+  _update(delta: number) {
     this._nextAttackTime -= delta;
     this._tryAttack();
   }
 
-  addEffect(effect: IAbilityEffect): void {
+  addEffect(effect: IEffect): void {
     this._effects.push(effect);
   }
 
-  removeEffect(effect: IAbilityEffect): void {}
+  removeEffect(effect: IEffect): void {}
 
   attack(targets: IUnit[]): AttackDetails {
     let target: IUnit;

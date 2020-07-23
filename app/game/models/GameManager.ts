@@ -102,12 +102,12 @@ export class GameManager {
       this.bot.sendMessage(msg.chat.id, "No cheating here, fag");
       return;
     }
-    const players = CharacterPool.getInstance().getAllFromChat({
+    const characters = CharacterPool.getInstance().getAllFromChat({
       chatId: msg.chat.id,
       alive: false,
     });
-    players?.forEach((player) => {
-      player.revive();
+    characters?.forEach((character) => {
+      character._doc.revive();
     });
   };
 
@@ -128,7 +128,7 @@ export class GameManager {
   };
 
   privateChatCmdHandler = async (msg: TelegramBot.Message, cmd: string) => {
-    let character: IPlayerDocument | undefined;
+    let character: Character | undefined;
 
     if (msg.chat.type === "private") {
       // Message received from private chat
@@ -167,7 +167,7 @@ export class GameManager {
         return;
       }
 
-      if (character && character.private_chat_id === undefined) {
+      if (character && character._doc.private_chat_id === undefined) {
         this.requestToStart(msg);
         return;
       }
@@ -175,24 +175,24 @@ export class GameManager {
 
     switch (cmd) {
       case BotCommands.SHOP: {
-        this.shop(character);
+        this.shop(character._doc);
         break;
       }
       case BotCommands.INVENTORY: {
-        this.inventory(character);
+        this.inventory(character._doc);
         break;
       }
       case BotCommands.DUEL: {
         if (this.gameInstances[msg.chat.id]?.isBattleInProgress()) {
           this.bot.sendMessage(
-            character.private_chat_id,
+            character._doc.private_chat_id,
             "Cannot start duel while another battle is in progress"
           );
           return;
         }
 
         if (!character.isAlive()) {
-          this.bot.sendMessage(character.private_chat_id, "Can't start duel while DEAD.");
+          this.bot.sendMessage(character._doc.private_chat_id, "Can't start duel while DEAD.");
           return;
         }
 
@@ -200,16 +200,16 @@ export class GameManager {
         if (args && args[1] && Number.parseInt(args[1], 10)) {
           const wager = Number.parseInt(args[1], 10);
 
-          if (character.money < wager) {
+          if (character._doc.money < wager) {
             this.bot.sendMessage(
-              character.private_chat_id,
+              character._doc.private_chat_id,
               "You don't have enough money to start duel"
             );
             return;
           }
-          this.duel(character, wager);
+          this.duel(character._doc, wager);
         } else {
-          this.bot.sendMessage(character.private_chat_id, "Usage: /duel <number>");
+          this.bot.sendMessage(character._doc.private_chat_id, "Usage: /duel <number>");
           return;
         }
 
@@ -221,20 +221,20 @@ export class GameManager {
           // Inspecting other character
           const inspectedCharacter = CharacterPool.getInstance().getByName({ name: args[1] });
           if (inspectedCharacter != null) {
-            this.character(inspectedCharacter, character);
+            this.character(inspectedCharacter._doc, character._doc);
           } else {
             const opts: TelegramBot.SendMessageOptions = {
               parse_mode: "HTML",
             };
             const message = await this.bot.sendMessage(
-              character.private_chat_id,
+              character._doc.private_chat_id,
               `Character with the name '${args[1]}' doesn't exist`,
               opts
             );
           }
         } else {
           // Inspecting self
-          this.character(character);
+          this.character(character._doc);
         }
         break;
       }
@@ -250,20 +250,20 @@ export class GameManager {
       // Links private chat id to player's characters
       const characters = CharacterPool.getInstance().get({ telegramId: msg.from?.id });
       for (const character of characters) {
-        character.private_chat_id = msg.chat.id;
-        await character.saveWithRetries();
+        character._doc.private_chat_id = msg.chat.id;
+        await character._doc.saveWithRetries();
 
         const cbData = new CallbackData({
           action: CallbackActions.START_CHARACTER_PICKED,
           telegram_id: msg.from?.id,
-          payload: character.name,
+          payload: character.getName(),
         });
         const cbDataJson = cbData.toJson();
         if (inlineKeyboard[row] === undefined) {
           inlineKeyboard[row] = [];
         }
         inlineKeyboard[row].push({
-          text: `${character.name} - ${character.level} lvl`,
+          text: `${character.getName()} - ${character.level} lvl`,
           callback_data: cbDataJson,
         });
         index++;
@@ -296,7 +296,7 @@ export class GameManager {
           case CallbackActions.START_CHARACTER_PICKED: {
             const character = CharacterPool.getInstance().getByName({ name: characterName });
             if (character) {
-              await UserModel.createOrUpdateUser(data.telegramId, character.chat_id);
+              await UserModel.createOrUpdateUser(data.telegramId, character.getChatId());
             }
             break;
           }

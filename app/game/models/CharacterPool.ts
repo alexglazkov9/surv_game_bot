@@ -2,10 +2,12 @@ import { IPlayerDocument } from "../../database/players/players.types";
 import { PlayerModel } from "../../database/players/players.model";
 import { logger } from "../../utils/logger";
 import { getRandomInt } from "../../utils/utils";
+import { Character } from "./units/Character";
+import { engine } from "../../app";
 
 export class CharacterPool {
   private static instance: CharacterPool;
-  private characters: IPlayerDocument[];
+  private characters: Character[];
 
   private constructor() {
     this.characters = [];
@@ -23,14 +25,18 @@ export class CharacterPool {
   public async init() {
     logger.info("Initializing CharacterPool...");
     try {
-      this.characters = await PlayerModel.find();
+      (await PlayerModel.find()).forEach((characterDoc) => {
+        const character = new Character(characterDoc);
+        this.characters.push(character);
+        engine.Add(character);
+      });
     } catch (err) {
       logger.error(`CharacterlPool initialization failed: ${err}`);
     }
   }
 
   public get({ telegramId }: { telegramId: number | undefined }) {
-    return this.characters.filter((chrctr) => chrctr.telegram_id === telegramId);
+    return this.characters.filter((chrctr) => chrctr.getTelegramId() === telegramId);
   }
 
   public getOne({
@@ -39,32 +45,32 @@ export class CharacterPool {
   }: {
     chatId: number;
     telegramId: number | undefined;
-  }): IPlayerDocument | undefined {
+  }): Character | undefined {
     return this.characters.find(
-      (chrctr) => chrctr.telegram_id === telegramId && chrctr.chat_id === chatId
+      (chrctr) => chrctr.getTelegramId() === telegramId && chrctr.getChatId() === chatId
     );
   }
 
   public getAllFromChat({ chatId, alive = true }: { chatId: number; alive?: boolean }) {
     return this.characters.filter(
-      (chrctr) => chrctr.chat_id === chatId && chrctr.isAlive() === alive
+      (chrctr) => chrctr.getChatId() === chatId && chrctr.isAlive() === alive
     );
   }
 
   public getByName({ name }: { name: string }) {
-    return this.characters.find((chrctr) => chrctr.name === name);
+    return this.characters.find((chrctr) => chrctr.getName() === name);
   }
 
   public exists({ telegramId, chatId }: { telegramId: number | undefined; chatId: number }) {
     return (
       this.characters.find(
-        (chrctr) => chrctr.telegram_id === telegramId && chrctr.chat_id === chatId
+        (chrctr) => chrctr.getTelegramId() === telegramId && chrctr.getChatId() === chatId
       ) !== undefined
     );
   }
 
   public isNameTaken({ name }: { name: string }) {
-    return this.characters.find((chrctr) => chrctr.name === name) !== undefined;
+    return this.characters.find((chrctr) => chrctr.getName() === name) !== undefined;
   }
 
   public async create({
@@ -76,18 +82,20 @@ export class CharacterPool {
     chatId: number;
     name: string;
   }) {
-    const character = await PlayerModel.createNewPlayer({
+    const characterDoc = await PlayerModel.createNewPlayer({
       telegram_id: telegramId,
       chat_id: chatId,
       name,
     });
 
+    const character = new Character(characterDoc);
     this.characters.push(character);
+    engine.Add(character);
     return character;
   }
 
   public getRandomLevel({ chatId }: { chatId: number }) {
-    let playersInChat: IPlayerDocument[];
+    let playersInChat: Character[];
     playersInChat = this.getAllFromChat({ chatId });
     let min = Number.MAX_SAFE_INTEGER;
     let max = 0;

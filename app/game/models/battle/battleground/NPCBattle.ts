@@ -1,19 +1,15 @@
 import { IUnit } from "../../units/IUnit";
 import TelegramBot from "node-telegram-bot-api";
 import { BattleEvents } from "../BattleEvents";
-import { getRandomInt, sleep } from "../../../../utils/utils";
 import { logger } from "../../../../utils/logger";
-import { IPlayerDocument, IPlayer } from "../../../../database/players/players.types";
 import { Enemy } from "../../units/Enemy";
 import { BattleGround, SIDE } from "./BattleGround";
 import { CallbackData } from "../../CallbackData";
 import { CallbackActions } from "../../../misc/CallbackConstants";
-import { PlayerModel } from "../../../../database/players/players.model";
-import { gameManager } from "../../../../app";
 import { CharacterPool } from "../../CharacterPool";
 import { Character } from "../../units/Character";
-import { InstantDamage } from "../../abilities/Ability";
 import { Engine } from "../../../Engine";
+import { InstantDamage } from "../../abilities/InstantDamageEffect";
 
 const UPDATE_DELAY = 5000;
 const LEAVE_DELAY = 5 * 60 * 1000;
@@ -92,16 +88,15 @@ export class NPCBattle extends BattleGround {
     }
 
     // Fetches character
-    const characterDoc: IPlayerDocument | undefined = CharacterPool.getInstance().getOne({
+    const character: Character | undefined = CharacterPool.getInstance().getOne({
       chatId: this.chatId,
       telegramId: callbackQuery.from.id,
     });
 
-    if (characterDoc === undefined) {
+    if (character === undefined) {
       return;
     }
 
-    const character = new Character(characterDoc);
     let optsCall: TelegramBot.AnswerCallbackQueryOptions = {
       callback_query_id: callbackQuery.id,
     };
@@ -127,7 +122,7 @@ export class NPCBattle extends BattleGround {
             return;
           } else {
             // Checks that unit is alive
-            if (characterDoc.isAlive()) {
+            if (character.isAlive()) {
               if (!this.isFightInProgress) {
                 this.startFight();
               }
@@ -137,7 +132,7 @@ export class NPCBattle extends BattleGround {
 
               this.battleLog.unitJoined(character);
 
-              logger.verbose(`Player ${characterDoc?.name} joined the fight in ${this.chatId}`);
+              logger.verbose(`Player ${character?.getName()} joined the fight in ${this.chatId}`);
 
               optsCall = {
                 callback_query_id: callbackQuery.id,
@@ -155,9 +150,9 @@ export class NPCBattle extends BattleGround {
           break;
         }
         case CallbackActions.CAST_ABILITY_1: {
-          let effect = new InstantDamage(character, 5);
+          const effect = new InstantDamage(character, 5);
           character.addEffect(effect);
-          this._engine.add(effect);
+          this._engine.Add(effect);
           break;
         }
       }
