@@ -174,7 +174,9 @@ export class GameInstance {
       alive: true,
     });
     players?.forEach((player) => {
-      player.passiveRegen(HP_REGEN_PERCENTAGE);
+      if (player.getHP() !== player.getMaxHP()) {
+        player.passiveRegen(HP_REGEN_PERCENTAGE);
+      }
     });
   };
 
