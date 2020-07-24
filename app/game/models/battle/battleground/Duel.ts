@@ -9,6 +9,7 @@ import { CharacterPool } from "../../CharacterPool";
 import { IUnit } from "../../units/IUnit";
 import _ = require("lodash");
 import { Character } from "../../units/Character";
+import { Engine } from "../../../Engine";
 
 const LEAVE_DELAY = 15 * 1000;
 
@@ -22,13 +23,15 @@ export class Duel extends BattleGround {
   constructor({
     chatId,
     bot,
+    engine,
     prizeMoney,
   }: {
     chatId: number;
     bot: TelegramBot;
+    engine: Engine;
     prizeMoney: number;
   }) {
-    super({ chatId, bot });
+    super({ chatId, bot, engine });
 
     this.teamHostBackup = [];
     this.teamGuestBackup = [];
@@ -45,7 +48,7 @@ export class Duel extends BattleGround {
     unitCopy.setHP(unitCopy.getMaxHP());
     this.teamGuest.push(unitCopy);
     // Add to game loop
-    this._engine.add(unitCopy);
+    this._engine.Add(unitCopy);
     unitCopy.addListener(BattleEvents.UNIT_ATTACKS, () => this._handleAttack(unitCopy));
     unitCopy.addListener(BattleEvents.UNIT_DIED, () => this._handleDeath(unitCopy));
   };
@@ -57,7 +60,7 @@ export class Duel extends BattleGround {
     unitCopy.setHP(unitCopy.getMaxHP());
     this.teamHost.push(unitCopy);
     // Add to game loop
-    this._engine.add(unitCopy);
+    this._engine.Add(unitCopy);
     unitCopy.addListener(BattleEvents.UNIT_ATTACKS, () => this._handleAttack(unitCopy));
     unitCopy.addListener(BattleEvents.UNIT_DIED, () => this._handleDeath(unitCopy));
   };
@@ -132,12 +135,12 @@ export class Duel extends BattleGround {
     let optsCall: TelegramBot.AnswerCallbackQueryOptions;
 
     if (callbackData.payload === this.id && callbackData.action === CallbackActions.JOIN_FIGHT) {
-      const player = CharacterPool.getInstance().getOne({
+      const character = CharacterPool.getInstance().getOne({
         telegramId: callbackQuery.from.id,
         chatId: this.chatId,
       });
 
-      if (player === undefined) {
+      if (character === undefined) {
         return;
       }
 
@@ -145,8 +148,8 @@ export class Duel extends BattleGround {
       if (
         this.teamGuest.findIndex((unit) => {
           return (
-            (unit as Character).getTelegramId() === player?.telegram_id &&
-            (unit as Character).getChatId() === player.chat_id
+            (unit as Character).getTelegramId() === character?.getTelegramId() &&
+            (unit as Character).getChatId() === character.getChatId()
           );
         }) !== -1
       ) {
@@ -160,7 +163,7 @@ export class Duel extends BattleGround {
       }
 
       // Ensures player has enough money
-      if (player.money < this.prizeMoney) {
+      if (character._doc.money < this.prizeMoney) {
         optsCall = {
           callback_query_id: callbackQuery.id,
           text: "You don't have enough money",
@@ -168,8 +171,7 @@ export class Duel extends BattleGround {
         };
       } else {
         // Checks that player is alive
-        if (player.isAlive()) {
-          const character = new Character(player);
+        if (character.isAlive()) {
           this.addToTeamGuest(character);
 
           // Hiding markup after first player joined
@@ -181,7 +183,7 @@ export class Duel extends BattleGround {
           this.startFight();
 
           this.battleLog.unitJoined(character);
-          logger.verbose(`Player ${player?.name} joined the fight in ${this.chatId}`);
+          logger.verbose(`Player ${character?.getName()} joined the fight in ${this.chatId}`);
 
           optsCall = {
             callback_query_id: callbackQuery.id,

@@ -21,6 +21,9 @@ import {
 import { ItemType } from "../../misc/ItemType";
 import { AttackDetails, AttackModifier } from "../../misc/AttackDetails";
 import { IUpdatable } from "../../IUpdatable";
+import { IEffect } from "../abilities/IEffect";
+import { BattleGround } from "../battle/battleground/BattleGround";
+import { engine } from "../../../app";
 
 const UPDATE_DELAY = 5000;
 const ATTACK_CHAT_EVENT = "attack_chat_event";
@@ -61,6 +64,10 @@ export class Enemy extends EventEmitter.EventEmitter implements IUpdatable, IUni
 
   // FUNCTIONAL
   attackRateInFight: number;
+
+  // IUnit
+  _currentBattle?: BattleGround;
+  _effects: IEffect[] = [];
 
   constructor({
     bot,
@@ -174,10 +181,16 @@ export class Enemy extends EventEmitter.EventEmitter implements IUpdatable, IUni
     return enemy;
   };
 
-  update = (delta: number) => {
+  _update = (delta: number) => {
     this._nextAttackTime -= delta;
     this._tryAttack();
   };
+
+  addEffect(effect: IEffect): void {
+    this._effects.push(effect);
+  }
+
+  removeEffect(effect: IEffect): void {}
 
   getDropItem = async (): Promise<IItemDocument | null> => {
     const itemDropProbabilities: number[] = [];
@@ -375,7 +388,9 @@ export class Enemy extends EventEmitter.EventEmitter implements IUpdatable, IUni
   _die(){
     logger.verbose(`${this.getName()} dies`);
     this.hp = 0;
+    this._isAttacking = false;
     this.emit(BattleEvents.UNIT_DIED);
+    engine.Remove(this);
   }
 
   _tryAttack = () => {

@@ -36,14 +36,18 @@ export class Engine {
     this._running = false;
   };
 
-  add = (system: IUpdatable) => {
+  Add(system: IUpdatable) {
     this._systems.push(system);
-  };
+  }
+
+  Remove(system: IUpdatable) {
+    this._systems.splice(this._systems.indexOf(system), 1);
+  }
 
   _update = () => {
     if (this._running) {
       this._systems.forEach((system) => {
-        system.update(this._step);
+        system._update(this._step);
       });
     }
   };

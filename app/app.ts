@@ -2,6 +2,7 @@ import { connect } from "./database/database";
 import { logger } from "./utils/logger";
 import TelegramBot = require("node-telegram-bot-api");
 import { GameManager } from "./game/models/GameManager";
+import { Engine } from "./game/Engine";
 
 let token: string;
 const botOptions: TelegramBot.ConstructorOptions = {};
@@ -44,3 +45,6 @@ export const db = connect();
 
 export const gameManager = new GameManager({ bot });
 gameManager.launch();
+
+export const engine = new Engine();
+engine.start();

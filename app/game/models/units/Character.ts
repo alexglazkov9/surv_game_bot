@@ -7,6 +7,8 @@ import { AttackDetails, AttackModifier } from "../../misc/AttackDetails";
 import { getRandomInt } from "../../../utils/utils";
 import { IItemDocument } from "../../../database/items/items.types";
 import { logger } from "../../../utils/logger";
+import { IEffect } from "../abilities/IEffect";
+import { BattleGround } from "../battle/battleground/BattleGround";
 
 export class Character extends EventEmitter.EventEmitter implements IUpdatable, IUnit {
   _doc: IPlayerDocument;
@@ -14,6 +16,8 @@ export class Character extends EventEmitter.EventEmitter implements IUpdatable, 
   // IUnit
   level: number;
   isInFight: boolean = false;
+  _currentBattle?: BattleGround;
+  _effects: IEffect[] = [];
 
   // Attack handling
   _isAttacking: boolean = false;
@@ -25,10 +29,16 @@ export class Character extends EventEmitter.EventEmitter implements IUpdatable, 
     this.level = this._doc.level;
   }
 
-  update(delta: number) {
+  _update(delta: number) {
     this._nextAttackTime -= delta;
     this._tryAttack();
   }
+
+  addEffect(effect: IEffect): void {
+    this._effects.push(effect);
+  }
+
+  removeEffect(effect: IEffect): void {}
 
   attack(targets: IUnit[]): AttackDetails {
     let target: IUnit;
@@ -169,6 +179,7 @@ export class Character extends EventEmitter.EventEmitter implements IUpdatable, 
   _die() {
     logger.verbose(`${this.getName()} dies`);
     this._doc.health_points = 0;
+    this._isAttacking = false;
     this.emit(BattleEvents.UNIT_DIED);
   }
 }

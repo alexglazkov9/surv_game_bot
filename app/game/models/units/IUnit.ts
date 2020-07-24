@@ -1,10 +1,12 @@
 import EventEmitter = require("events");
 import { AttackDetails } from "../../misc/AttackDetails";
 import { IUpdatable } from "../../IUpdatable";
+import { IEffect } from "../abilities/IEffect";
+import { BattleGround } from "../battle/battleground/BattleGround";
 
 export interface IUnit extends EventEmitter.EventEmitter, IUpdatable {
-  attackTimer?: NodeJS.Timeout;
   level: number;
+  _currentBattle?: BattleGround;
 
   getAttackDamage(attackDetails: AttackDetails): AttackDetails;
   getAttackSpeed(): number;
@@ -18,4 +20,6 @@ export interface IUnit extends EventEmitter.EventEmitter, IUpdatable {
   getHpIndicator(): string;
   getMaxHP(): number;
   getHP(): number;
+  addEffect(effect: IEffect): void;
+  removeEffect(effect: IEffect): void;
 }

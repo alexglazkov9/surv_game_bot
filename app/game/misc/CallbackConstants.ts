@@ -1,5 +1,6 @@
 export class CallbackActions {
   static JOIN_FIGHT = "join_fight";
+  static CAST_ABILITY_1 = "abilitiy1";
 
   // PLAYER STATS
   static PLAYER_STATS_NAV = "statsnav";

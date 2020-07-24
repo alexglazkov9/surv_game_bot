@@ -12,6 +12,7 @@ import { Duel } from "./battle/battleground/Duel";
 import { CharacterPool } from "./CharacterPool";
 import { GameParams } from "../misc/GameParameters";
 import { Character } from "./units/Character";
+import { engine } from "../../app";
 
 const RESPAWN_RATE = 60 * 60 * 1000;
 const HP_REGEN_RATE = 1 * 60 * 1000;
@@ -41,6 +42,7 @@ export class GameInstance {
     const duel = new Duel({
       chatId: this.chatId,
       bot: this.bot,
+      engine,
       prizeMoney: wager,
     });
 
@@ -65,7 +67,7 @@ export class GameInstance {
     const enemy = await this.getRandomEnemy();
     // const enemy2 = await this.getRandomEnemy(enemy.level);
 
-    const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot });
+    const battle = new NPCBattle({ chatId: this.chatId, bot: this.bot, engine });
 
     battle.addListener(BattleEvents.BATTLE_ENDED, () => {
       if (!onlyOne) {
@@ -75,18 +77,18 @@ export class GameInstance {
     });
 
     battle.addToTeamHost(enemy);
+    engine.Add(enemy);
     // battle.addToTeamHost(enemy2);
 
     // 10% chance to instantly start fighting someone
     if (getRandomInt(0, 100) >= 90) {
-      let characterDoc;
+      let character;
       // Makes sure enemy attacks player of the same level
       do {
-        const characterDocs = CharacterPool.getInstance().getAllFromChat({ chatId: this.chatId });
-        characterDoc = characterDocs[getRandomInt(0, characterDocs.length)];
-      } while (Math.abs(characterDoc.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
+        const characters = CharacterPool.getInstance().getAllFromChat({ chatId: this.chatId });
+        character = characters[getRandomInt(0, characters.length)];
+      } while (Math.abs(character.level - enemy.level) > GameParams.ALLOWED_LEVEL_DIFFERENCE);
 
-      const character = new Character(characterDoc);
       battle.addToTeamGuest(character);
       battle.startFight();
     }
@@ -153,7 +155,7 @@ export class GameInstance {
       alive: false,
     });
     players?.forEach((player) => {
-      player.revive();
+      player._doc.revive();
     });
 
     this.bot.sendMessage(this.chatId, `👼🏿All players have been respawned.`, {
@@ -174,9 +176,7 @@ export class GameInstance {
       alive: true,
     });
     players?.forEach((player) => {
-      if (player.getHP() !== player.getMaxHP()) {
-        player.passiveRegen(HP_REGEN_PERCENTAGE);
-      }
+      player._doc.passiveRegen(HP_REGEN_PERCENTAGE);
     });
   };
 
