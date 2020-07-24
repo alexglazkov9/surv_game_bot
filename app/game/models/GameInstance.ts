@@ -34,7 +34,7 @@ export class GameInstance {
 
   start = async () => {
     this.startSpawning();
-    this.startHpRegen();
+    //this.startHpRegen();
     this.startRevivingPlayers();
   };
 
