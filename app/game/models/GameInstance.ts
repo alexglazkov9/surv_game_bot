@@ -77,6 +77,7 @@ export class GameInstance {
     });
 
     battle.addToTeamHost(enemy);
+    engine.Add(enemy);
     // battle.addToTeamHost(enemy2);
 
     // 10% chance to instantly start fighting someone

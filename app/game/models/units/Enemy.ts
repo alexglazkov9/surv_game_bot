@@ -23,6 +23,7 @@ import { AttackDetails, AttackModifier } from "../../misc/AttackDetails";
 import { IUpdatable } from "../../IUpdatable";
 import { IEffect } from "../abilities/IEffect";
 import { BattleGround } from "../battle/battleground/BattleGround";
+import { engine } from "../../../app";
 
 const UPDATE_DELAY = 5000;
 const ATTACK_CHAT_EVENT = "attack_chat_event";
@@ -389,6 +390,7 @@ export class Enemy extends EventEmitter.EventEmitter implements IUpdatable, IUni
     this.hp = 0;
     this._isAttacking = false;
     this.emit(BattleEvents.UNIT_DIED);
+    engine.Remove(this);
   }
 
   _tryAttack = () => {

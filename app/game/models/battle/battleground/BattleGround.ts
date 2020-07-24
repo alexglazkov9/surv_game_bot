@@ -203,12 +203,12 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
               callback_data: callbackData.toJson(),
             },
           ],
-          [
-            {
-              text: "Ability 1",
-              callback_data: castAbilityCbData.toJson(),
-            },
-          ],
+          // [
+          //   {
+          //     text: "Ability 1",
+          //     callback_data: castAbilityCbData.toJson(),
+          //   },
+          // ],
         ],
       },
     };
@@ -242,12 +242,12 @@ export abstract class BattleGround extends EventEmitter.EventEmitter implements 
               callback_data: callbackData.toJson(),
             },
           ],
-          [
-            {
-              text: "Ability 1",
-              callback_data: castAbilityCbData.toJson(),
-            },
-          ],
+          // [
+          //   {
+          //     text: "Ability 1",
+          //     callback_data: castAbilityCbData.toJson(),
+          //   },
+          // ],
         ],
       },
     };
