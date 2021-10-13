@@ -1,5 +1,7 @@
 # surv_game_bot
 
+Survgram is a survival multiplayer RPG game bot for Telegram written in TypeScript
+
 ## How to run
 
 1. Install
